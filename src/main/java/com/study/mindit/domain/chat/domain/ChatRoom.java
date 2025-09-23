@@ -14,4 +14,7 @@ public class ChatRoom extends BaseDocument {
 
     @Field("room_type")
     private RoomType roomType;
+
+    @Field("session_type")
+    private String sessionId;
 } 

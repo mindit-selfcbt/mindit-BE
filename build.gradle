@@ -35,6 +35,9 @@ dependencies {
 	// mvc
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 
+	// webClient
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
 	// websocket
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
@@ -57,8 +60,13 @@ dependencies {
 	// devtools
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
+	// test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testImplementation 'io.projectreactor:reactor-test'
+	testImplementation 'org.mockito:mockito-core:5.11.0'
+	testImplementation 'org.mockito:mockito-junit-jupiter:5.11.0'
+	testImplementation 'com.github.tomakehurst:wiremock-jre8-standalone:2.35.0'
+	testImplementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo:3.4.7'
 }
 
 

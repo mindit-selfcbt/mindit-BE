@@ -2,82 +2,85 @@ package com.study.mindit.domain.chat.application;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.study.mindit.domain.chat.domain.Chat;
+import com.study.mindit.domain.chat.dto.request.ChatRequestDTO_1;
+import com.study.mindit.domain.chat.dto.request.ChatRequestDTO_2;
+import com.study.mindit.domain.chat.dto.request.ConversationItem;
+import com.study.mindit.domain.chat.dto.response.ChatResponseDTO_1;
+import com.study.mindit.domain.chat.dto.response.ChatResponseDTO_2;
+import com.study.mindit.domain.chat.dto.response.ChatResponseDTO_3;
+import com.study.mindit.global.fastApi.FastApiUrls;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import com.study.mindit.domain.chat.domain.Chat;
-import com.study.mindit.global.fastApi.FastApiUrls;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
-import java.util.List;
 
-/**
- * AI 서비스 클래스
- * FastAPI 서버와 통신하여 AI 응답을 받아오는 역할을 담당
- */
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class AiService {
 
-    private final RestTemplate restTemplate;
+    private final WebClient.Builder webClientBuilder;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final FastApiUrls fastApiUrls;
 
-    /**
-     * 첫 번째 대화 단계 분석을 위한 AI 응답 요청
-     */
-    public Mono<String> callAnalyze1(List<Chat> chatHistory, String userMessage) {
-        return callFastApiEndpoint(fastApiUrls.getAnalyze1(), chatHistory, userMessage);
+    // analyze1 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_1로 받음)
+    public Mono<ChatResponseDTO_1> callAnalyze1(String sessionId, String content) {
+        ChatRequestDTO_1 requestBody = ChatRequestDTO_1.builder()
+                .content(content)
+                .sessionId(sessionId)
+                .build();
+        return callFastApiEndpoint(fastApiUrls.getAnalyze1(), requestBody, ChatResponseDTO_1.class);
     }
 
-    /**
-     * 두 번째 대화 단계 분석을 위한 AI 응답 요청
-     */
-    public Mono<String> callAnalyze2(List<Chat> chatHistory, String userMessage) {
-        return callFastApiEndpoint(fastApiUrls.getAnalyze2(), chatHistory, userMessage);
+    // analyze2 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_2로 받음)
+    public Mono<ChatResponseDTO_2> callAnalyze2(String sessionId, List<Chat> chatHistory) {
+        List<ConversationItem> conversation = chatHistory.stream()
+                .map(chat -> new ConversationItem(chat.getSender().name().toLowerCase(), chat.getContent()))
+                .collect(Collectors.toList());
+
+        ChatRequestDTO_2 requestBody = ChatRequestDTO_2.builder()
+                .conversationHistory(conversation)
+                .sessionId(sessionId)
+                .build();
+        return callFastApiEndpoint(fastApiUrls.getAnalyze2(), requestBody, ChatResponseDTO_2.class);
     }
 
-    /**
-     * 세 번째 대화 단계 분석을 위한 AI 응답 요청
-     */
-    public Mono<String> callAnalyze3(List<Chat> chatHistory, String userMessage) {
-        return callFastApiEndpoint(fastApiUrls.getAnalyze3(), chatHistory, userMessage);
+    // analyze3 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_3으로 받음)
+    public Mono<ChatResponseDTO_3> callAnalyze3(String sessionId, List<Chat> chatHistory) {
+        List<ConversationItem> conversation = chatHistory.stream()
+                .map(chat -> new ConversationItem(chat.getSender().name().toLowerCase(), chat.getContent()))
+                .collect(Collectors.toList());
+
+        ChatRequestDTO_2 requestBody = ChatRequestDTO_2.builder()
+                .conversationHistory(conversation)
+                .sessionId(sessionId)
+                .build();
+        return callFastApiEndpoint(fastApiUrls.getAnalyze3(), requestBody, ChatResponseDTO_3.class);
     }
 
-    /**
-     * 네 번째 대화 단계 분석을 위한 AI 응답 요청
-     */
-    public Mono<String> callAnalyze4(List<Chat> chatHistory, String userMessage) {
-        return callFastApiEndpoint(fastApiUrls.getAnalyze4(), chatHistory, userMessage);
-    }
-
-    /**
-     * 공통 FastAPI 엔드포인트 호출 메서드
-     */
-    private Mono<String> callFastApiEndpoint(String endpointUrl, List<Chat> chatHistory, String userMessage) {
+    // 요청과 응답 타입을 범용적으로 처리하는 메서드
+    private <T> Mono<T> callFastApiEndpoint(String endpointUrl, Object requestBody, Class<T> responseType) {
+        String requestBodyJson;
         try {
-            String chatHistoryJson = objectMapper.writeValueAsString(chatHistory);
-            String requestBody = String.format("{\"chat_history\": %s, \"user_message\": \"%s\"}", chatHistoryJson, userMessage);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
-
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    endpointUrl,
-                    entity,
-                    String.class
-            );
-
-            return Mono.just(response.getBody());
-
+            requestBodyJson = objectMapper.writeValueAsString(requestBody);
         } catch (JsonProcessingException e) {
-            return Mono.error(e);
+            return Mono.error(new RuntimeException("JSON 변환 오류", e));
         }
+
+        return webClientBuilder.build()
+                .post()
+                .uri(endpointUrl)
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .body(BodyInserters.fromValue(requestBodyJson))
+                .retrieve()
+                .bodyToMono(responseType) // 응답 타입을 동적으로 지정
+                .doOnError(throwable -> System.err.println("API 호출 중 오류 발생: " + throwable.getMessage()))
+                .onErrorResume(throwable -> Mono.error(new RuntimeException("API 호출 실패", throwable)));
     }
 }
