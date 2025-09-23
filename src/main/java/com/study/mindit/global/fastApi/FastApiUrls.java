@@ -15,7 +15,4 @@ public class FastApiUrls {
 
     @Value("${fastApi.urls.analyze_chat_3}")
     private String analyze3;
-
-    @Value("${fastApi.urls.analyze_chat_4}")
-    private String analyze4;
 }

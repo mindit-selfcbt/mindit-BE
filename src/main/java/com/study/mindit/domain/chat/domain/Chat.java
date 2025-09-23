@@ -5,6 +5,8 @@ import lombok.*;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
+import java.util.List;
+
 @Document(collection = "chat")
 @Getter
 @Builder
@@ -12,15 +14,27 @@ import org.springframework.data.mongodb.core.mapping.Field;
 @AllArgsConstructor
 public class Chat extends BaseDocument {
 
-	@Field("room_id")
-	private String roomId;
+	@Field("session_id")
+	private String sessionId;
 
 	@Field("sender")
 	private SenderType sender;
 
+	@Field("step")
+	private int step;
+
 	@Field("content")
 	private String content;
 
-	@Field("step")
-	private int step;
+	@Field("question")
+	private String question;
+
+	@Field("choices")
+	private List<String> choices;
+
+	@Field("user_pattern_summary")
+	private String userPatternSummary;
+
+	@Field("thought_examples")
+	private List<String> thoughtExamples;
 }
