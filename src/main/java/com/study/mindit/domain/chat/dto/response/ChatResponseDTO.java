@@ -26,7 +26,6 @@ public class ChatResponseDTO {
 
     private List<String> thoughtExamples;
 
-    @JsonProperty("session_id")
     private String sessionId;
 
     private Integer step;
