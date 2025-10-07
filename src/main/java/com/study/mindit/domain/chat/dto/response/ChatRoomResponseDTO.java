@@ -1,5 +1,6 @@
 package com.study.mindit.domain.chat.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.study.mindit.domain.chat.domain.ChatRoom;
 import lombok.*;
 
@@ -9,6 +10,7 @@ import lombok.*;
 @AllArgsConstructor
 public class ChatRoomResponseDTO {
 
+    @JsonProperty("session_id")
     private String sessionId;
 
     public static ChatRoomResponseDTO from(ChatRoom chatRoom) {

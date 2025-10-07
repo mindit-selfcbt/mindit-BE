@@ -9,6 +9,7 @@ import com.study.mindit.domain.chat.domain.repository.ChatRoomRepository;
 import com.study.mindit.domain.chat.dto.request.ChatRequestDTO_1;
 import com.study.mindit.domain.chat.dto.response.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.UUID;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class ChatService {
@@ -26,10 +28,16 @@ public class ChatService {
 
     // 1. 전체 로직의 시작점이자 흐름을 조정하는 역할
     public Mono<ChatResponseDTO> processChatMessage(ChatRequestDTO_1 chatRequestDto) {
+        log.info("=== ChatService.processChatMessage 시작 ===");
+        log.info("입력: {}", chatRequestDto);
+        
         return chatRepository.findBySessionId(chatRequestDto.getSessionId())
                 .collectList()
                 .flatMap(chatHistory -> {
+                    log.info("=== 채팅 히스토리 조회 완료: {}개 ===", chatHistory.size());
                     int nextStep = getLastMessageStep(chatHistory) + 1;
+                    log.info("=== 다음 단계: {} ===", nextStep);
+                    
                     Chat userChat = Chat.builder()
                             .sender(SenderType.USER)
                             .content(chatRequestDto.getContent())
@@ -46,30 +54,23 @@ public class ChatService {
     private Mono<Object> saveUserChatAndCallAi(Chat userChat, List<Chat> chatHistory) {
         return chatRepository.save(userChat)
                 .flatMap(savedUserChat -> {
-                    // 이 메서드는 단지 다음 메서드로 필요한 인자를 넘겨주는 역할만 합니다.
-                    // updatedChatHistory 생성 로직은 제거합니다.
                     return callFastApiBasedOnStep(savedUserChat.getStep(), savedUserChat.getSessionId(), chatHistory, savedUserChat);
                 });
     }
 
     // 3. AI 응답 DTO에서 필요한 콘텐츠를 추출하고, 필요한 경우 대화 기록을 준비하는 역할
     private Mono<Object> callFastApiBasedOnStep(int step, String sessionId, List<Chat> chatHistory, Chat userChat) {
-        // 여기서만 updatedChatHistory를 생성합니다.
-        // 2단계와 3단계 호출에 필요한 완전한 대화 기록을 준비합니다.
         List<Chat> updatedChatHistory = new ArrayList<>(chatHistory);
         updatedChatHistory.add(userChat);
 
         switch (step) {
             case 1:
-                // 1단계는 최신 메시지(userChat.getContent())만 필요하므로, updatedChatHistory를 사용하지 않습니다.
                 return aiService.callAnalyze1(sessionId, userChat.getContent())
                         .map(response -> (Object) response);
             case 2:
-                // 2단계에서는 전체 대화 기록을 전달합니다.
                 return aiService.callAnalyze2(sessionId, updatedChatHistory)
                         .map(response -> (Object) response);
             case 3:
-                // 3단계에서도 전체 대화 기록을 전달합니다.
                 return aiService.callAnalyze3(sessionId, updatedChatHistory)
                         .map(response -> (Object) response);
             default:
