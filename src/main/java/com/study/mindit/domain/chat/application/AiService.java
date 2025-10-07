@@ -11,6 +11,7 @@ import com.study.mindit.domain.chat.dto.response.ChatResponseDTO_2;
 import com.study.mindit.domain.chat.dto.response.ChatResponseDTO_3;
 import com.study.mindit.global.fastApi.FastApiUrls;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AiService {
@@ -31,11 +33,17 @@ public class AiService {
 
     // analyze1 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_1로 받음)
     public Mono<ChatResponseDTO_1> callAnalyze1(String sessionId, String content) {
+        log.info("=== FastAPI analyze1 호출 시작 ===");
+        log.info("sessionId: {}, content: {}", sessionId, content);
+        
         ChatRequestDTO_1 requestBody = ChatRequestDTO_1.builder()
                 .content(content)
                 .sessionId(sessionId)
                 .build();
-        return callFastApiEndpoint(fastApiUrls.getAnalyze1(), requestBody, ChatResponseDTO_1.class);
+        
+        return callFastApiEndpoint(fastApiUrls.getAnalyze1(), requestBody, ChatResponseDTO_1.class)
+                .doOnNext(response -> log.info("=== FastAPI 응답 수신: {} ===", response))
+                .doOnError(error -> log.error("=== FastAPI 호출 에러 ===", error));
     }
 
     // analyze2 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_2로 받음)
@@ -66,10 +74,15 @@ public class AiService {
 
     // 요청과 응답 타입을 범용적으로 처리하는 메서드
     private <T> Mono<T> callFastApiEndpoint(String endpointUrl, Object requestBody, Class<T> responseType) {
+        log.info("=== FastAPI 엔드포인트 호출: {} ===", endpointUrl);
+        log.info("요청 바디: {}", requestBody);
+        
         String requestBodyJson;
         try {
             requestBodyJson = objectMapper.writeValueAsString(requestBody);
+            log.info("JSON 변환 완료: {}", requestBodyJson);
         } catch (JsonProcessingException e) {
+            log.error("=== JSON 변환 오류 ===", e);
             return Mono.error(new RuntimeException("JSON 변환 오류", e));
         }
 
@@ -79,8 +92,11 @@ public class AiService {
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .body(BodyInserters.fromValue(requestBodyJson))
                 .retrieve()
-                .bodyToMono(responseType) // 응답 타입을 동적으로 지정
-                .doOnError(throwable -> System.err.println("API 호출 중 오류 발생: " + throwable.getMessage()))
+                .bodyToMono(responseType)
+                .doOnNext(response -> log.info("=== FastAPI 응답 성공: {} ===", response))
+                .doOnError(throwable -> {
+                    log.error("=== API 호출 중 오류 발생 ===", throwable);
+                })
                 .onErrorResume(throwable -> Mono.error(new RuntimeException("API 호출 실패", throwable)));
     }
 }

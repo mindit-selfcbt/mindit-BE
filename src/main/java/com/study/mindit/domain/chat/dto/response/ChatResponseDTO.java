@@ -1,6 +1,7 @@
 package com.study.mindit.domain.chat.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.study.mindit.domain.chat.domain.Chat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,6 +26,7 @@ public class ChatResponseDTO {
 
     private List<String> thoughtExamples;
 
+    @JsonProperty("session_id")
     private String sessionId;
 
     private Integer step;
