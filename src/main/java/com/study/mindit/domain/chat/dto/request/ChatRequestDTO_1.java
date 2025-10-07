@@ -13,10 +13,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ChatRequestDTO_1 {
 
-    @JsonProperty("user_text")
     private String content;
 
-    @JsonProperty("session_id")
     private String sessionId;
 
     public Chat toEntity() {

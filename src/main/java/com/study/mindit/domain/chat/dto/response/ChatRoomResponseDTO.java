@@ -10,7 +10,6 @@ import lombok.*;
 @AllArgsConstructor
 public class ChatRoomResponseDTO {
 
-    @JsonProperty("session_id")
     private String sessionId;
 
     public static ChatRoomResponseDTO from(ChatRoom chatRoom) {
