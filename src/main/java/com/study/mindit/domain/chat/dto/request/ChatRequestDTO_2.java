@@ -15,8 +15,10 @@ import java.util.List;
 @AllArgsConstructor
 public class ChatRequestDTO_2 {
 
+    @JsonProperty("conversation_history")
     private List<ConversationItem> conversationHistory;
 
+    @JsonProperty("session_id")
     private String sessionId;
 
     public Chat toEntity() {

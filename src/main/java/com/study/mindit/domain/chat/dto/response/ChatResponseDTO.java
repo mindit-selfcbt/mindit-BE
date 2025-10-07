@@ -22,10 +22,13 @@ public class ChatResponseDTO {
 
     private List<String> choices;
 
+    @JsonProperty("user_pattern_summary")
     private String userPatternSummary;
 
+    @JsonProperty("thought_examples")
     private List<String> thoughtExamples;
 
+    @JsonProperty("session_id")
     private String sessionId;
 
     private Integer step;
