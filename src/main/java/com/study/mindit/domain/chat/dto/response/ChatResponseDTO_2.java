@@ -14,5 +14,6 @@ public class ChatResponseDTO_2 {
 
     private String response;
 
+    @JsonProperty("session_id")
     private String sessionId;
 }

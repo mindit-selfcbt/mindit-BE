@@ -17,5 +17,6 @@ public class ChatResponseDTO_1 {
 
     private List<String> choices;
 
+    @JsonProperty("session_id")
     private String sessionId;
 }
