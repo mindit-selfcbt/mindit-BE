@@ -2,13 +2,15 @@ package com.study.mindit.domain.chat.application;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.study.mindit.domain.chat.domain.Chat;
 import com.study.mindit.domain.chat.dto.request.ChatRequestDTO_1;
 import com.study.mindit.domain.chat.dto.request.ChatRequestDTO_2;
-import com.study.mindit.domain.chat.dto.request.ConversationItem;
+import com.study.mindit.domain.chat.dto.request.ConversationItemDTO;
 import com.study.mindit.domain.chat.dto.response.ChatResponseDTO_1;
 import com.study.mindit.domain.chat.dto.response.ChatResponseDTO_2;
 import com.study.mindit.domain.chat.dto.response.ChatResponseDTO_3;
+import com.study.mindit.domain.chat.dto.response.ChatResponseDTO_4;
+import com.study.mindit.domain.chat.dto.response.ChatResponseDTO_5;
+import com.study.mindit.domain.chat.dto.response.ChatResponseDTO_6;
 import com.study.mindit.global.fastApi.FastApiUrls;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +22,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -32,7 +33,7 @@ public class AiService {
     private final FastApiUrls fastApiUrls;
 
     // analyze1 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_1로 받음)
-    public Mono<ChatResponseDTO_1> callAnalyze1(String sessionId, String content) {
+    public Mono<ChatResponseDTO_1> callAnalyze1(String sessionId, Object content) {
         log.info("=== FastAPI analyze1 호출 시작 ===");
         log.info("sessionId: {}, content: {}", sessionId, content);
         
@@ -47,29 +48,75 @@ public class AiService {
     }
 
     // analyze2 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_2로 받음)
-    public Mono<ChatResponseDTO_2> callAnalyze2(String sessionId, List<Chat> chatHistory) {
-        List<ConversationItem> conversation = chatHistory.stream()
-                .map(chat -> new ConversationItem(chat.getSender().name().toLowerCase(), chat.getContent()))
-                .collect(Collectors.toList());
-
+    public Mono<ChatResponseDTO_2> callAnalyze2(String sessionId, List<ConversationItemDTO> conversationHistory) {
         ChatRequestDTO_2 requestBody = ChatRequestDTO_2.builder()
-                .conversationHistory(conversation)
+                .conversationHistory(conversationHistory)
                 .sessionId(sessionId)
                 .build();
         return callFastApiEndpoint(fastApiUrls.getAnalyze2(), requestBody, ChatResponseDTO_2.class);
     }
 
     // analyze3 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_3으로 받음)
-    public Mono<ChatResponseDTO_3> callAnalyze3(String sessionId, List<Chat> chatHistory) {
-        List<ConversationItem> conversation = chatHistory.stream()
-                .map(chat -> new ConversationItem(chat.getSender().name().toLowerCase(), chat.getContent()))
-                .collect(Collectors.toList());
-
+    public Mono<ChatResponseDTO_3> callAnalyze3(String sessionId, List<ConversationItemDTO> conversationHistory) {
         ChatRequestDTO_2 requestBody = ChatRequestDTO_2.builder()
-                .conversationHistory(conversation)
+                .conversationHistory(conversationHistory)
                 .sessionId(sessionId)
                 .build();
         return callFastApiEndpoint(fastApiUrls.getAnalyze3(), requestBody, ChatResponseDTO_3.class);
+    }
+
+    // analyze4 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_4로 받음)
+    public Mono<ChatResponseDTO_4> callAnalyze4(String sessionId, List<ConversationItemDTO> conversationHistory) {
+        ChatRequestDTO_2 requestBody = ChatRequestDTO_2.builder()
+                .conversationHistory(conversationHistory)
+                .sessionId(sessionId)
+                .build();
+        return callFastApiEndpoint(fastApiUrls.getAnalyze4(), requestBody, ChatResponseDTO_4.class);
+    }
+
+    // analyze5 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_2로 받음)
+    public Mono<ChatResponseDTO_2> callAnalyze5(String sessionId, List<ConversationItemDTO> conversationHistory) {
+        ChatRequestDTO_2 requestBody = ChatRequestDTO_2.builder()
+                .conversationHistory(conversationHistory)
+                .sessionId(sessionId)
+                .build();
+        return callFastApiEndpoint(fastApiUrls.getAnalyze5(), requestBody, ChatResponseDTO_2.class);
+    }
+
+    // analyze6 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_2로 받음)
+    public Mono<ChatResponseDTO_2> callAnalyze6(String sessionId, List<ConversationItemDTO> conversationHistory) {
+        ChatRequestDTO_2 requestBody = ChatRequestDTO_2.builder()
+                .conversationHistory(conversationHistory)
+                .sessionId(sessionId)
+                .build();
+        return callFastApiEndpoint(fastApiUrls.getAnalyze6(), requestBody, ChatResponseDTO_2.class);
+    }
+
+    // analyze7 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_7로 받음)
+    public Mono<ChatResponseDTO_5> callAnalyze7(String sessionId, List<ConversationItemDTO> conversationHistory) {
+        ChatRequestDTO_2 requestBody = ChatRequestDTO_2.builder()
+                .conversationHistory(conversationHistory)
+                .sessionId(sessionId)
+                .build();
+        return callFastApiEndpoint(fastApiUrls.getAnalyze7(), requestBody, ChatResponseDTO_5.class);
+    }
+
+    // analyze8 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_2로 받음)
+    public Mono<ChatResponseDTO_2> callAnalyze8(String sessionId, List<ConversationItemDTO> conversationHistory) {
+        ChatRequestDTO_2 requestBody = ChatRequestDTO_2.builder()
+                .conversationHistory(conversationHistory)
+                .sessionId(sessionId)
+                .build();
+        return callFastApiEndpoint(fastApiUrls.getAnalyze8(), requestBody, ChatResponseDTO_2.class);
+    }
+
+    // analyze9 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_6로 받음)
+    public Mono<ChatResponseDTO_6> callAnalyze9(String sessionId, List<ConversationItemDTO> conversationHistory) {
+        ChatRequestDTO_2 requestBody = ChatRequestDTO_2.builder()
+                .conversationHistory(conversationHistory)
+                .sessionId(sessionId)
+                .build();
+        return callFastApiEndpoint(fastApiUrls.getAnalyze9(), requestBody, ChatResponseDTO_6.class);
     }
 
     // 요청과 응답 타입을 범용적으로 처리하는 메서드

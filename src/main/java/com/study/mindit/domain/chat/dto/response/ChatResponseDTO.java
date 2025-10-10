@@ -2,7 +2,6 @@ package com.study.mindit.domain.chat.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.study.mindit.domain.chat.domain.Chat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,11 +15,14 @@ import java.util.List;
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ChatResponseDTO {
-    private String content;
-
     private String question;
 
     private List<String> choices;
+
+    private String response;
+
+    @JsonProperty("gratitude_message")
+    private String gratitudeMessage;
 
     @JsonProperty("user_pattern_summary")
     private String userPatternSummary;
@@ -28,20 +30,30 @@ public class ChatResponseDTO {
     @JsonProperty("thought_examples")
     private List<String> thoughtExamples;
 
+    @JsonProperty("category_message")
+    private String categoryMessage;
+
+    @JsonProperty("encouragement")
+    private String encouragement;
+
+    @JsonProperty("intro_message")
+    private String introMessage;
+
+    @JsonProperty("situations")
+    private List<String> situations;
+
+    @JsonProperty("anxiety_hierarchy")
+    private List<AnxietyHierarchyItemDTO> anxietyHierarchy;
+
+    @JsonProperty("practice_message")
+    private String practiceMessage;
+
+    @JsonProperty("example_message")
+    private String exampleMessage;
+
+    @JsonProperty("support_message")
+    private String supportMessage;
+
     @JsonProperty("session_id")
     private String sessionId;
-
-    private Integer step;
-
-    public static ChatResponseDTO from(Chat chat) {
-        return ChatResponseDTO.builder()
-                .content(chat.getContent())
-                .sessionId(chat.getSessionId())
-                .step(chat.getStep())
-                .question(chat.getQuestion())
-                .choices(chat.getChoices())
-                .userPatternSummary(chat.getUserPatternSummary())
-                .thoughtExamples(chat.getThoughtExamples())
-                .build();
-    }
 }

@@ -2,5 +2,9 @@ package com.study.mindit.domain.chat.domain;
 
 public enum SenderType {
     USER,
-    AI
+    AI;
+    
+    public String toRole() {
+        return this == AI ? "assistant" : "user";
+    }
 }

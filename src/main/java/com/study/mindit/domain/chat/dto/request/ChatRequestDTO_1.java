@@ -1,7 +1,6 @@
 package com.study.mindit.domain.chat.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.study.mindit.domain.chat.domain.Chat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,15 +13,8 @@ import lombok.NoArgsConstructor;
 public class ChatRequestDTO_1 {
 
     @JsonProperty("user_text")
-    private String content;
+    private Object content;  // String 또는 구조화된 객체 모두 허용
 
     @JsonProperty("session_id")
     private String sessionId;
-
-    public Chat toEntity() {
-        return Chat.builder()
-                .sessionId(sessionId)
-                .content(content)
-                .build();
-    }
 }
