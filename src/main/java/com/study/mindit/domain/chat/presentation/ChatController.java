@@ -1,9 +1,9 @@
 package com.study.mindit.domain.chat.presentation;
 
 import com.study.mindit.domain.chat.application.ChatService;
+import com.study.mindit.domain.chat.domain.ChatRoom;
 import com.study.mindit.domain.chat.domain.RoomType;
 import com.study.mindit.domain.chat.dto.request.ChatRequestDTO_1;
-import com.study.mindit.domain.chat.dto.response.ChatResponseDTO;
 import com.study.mindit.domain.chat.dto.response.ChatRoomResponseDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,7 +67,9 @@ public class ChatController {
 
     // REST API - 채팅방의 메시지 목록 조회
     @GetMapping("/room/{sessionId}")
-    public Flux<ChatResponseDTO> getChatMessages(@PathVariable String sessionId) {
-        return chatService.getChatMessages(sessionId);
+    public Mono<ResponseEntity<ChatRoom>> getChatMessages(@PathVariable String sessionId) {
+        return chatService.getChatMessages(sessionId)
+                .map(chatRoom -> ResponseEntity.ok(chatRoom))
+                .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 }
