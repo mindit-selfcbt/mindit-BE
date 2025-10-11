@@ -1,4 +1,4 @@
-package com.study.mindit.domain.chat.dto.response;
+package com.study.mindit.domain.chat.dto.obsession.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -14,7 +14,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ChatResponseDTO {
+public class OBChatResponseDTO {
     private String question;
 
     private List<String> choices;
@@ -43,7 +43,7 @@ public class ChatResponseDTO {
     private List<String> situations;
 
     @JsonProperty("anxiety_hierarchy")
-    private List<AnxietyHierarchyItemDTO> anxietyHierarchy;
+    private List<OBAnxietyHierarchyDTO> anxietyHierarchy;
 
     @JsonProperty("practice_message")
     private String practiceMessage;

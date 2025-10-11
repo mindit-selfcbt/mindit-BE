@@ -1,4 +1,4 @@
-package com.study.mindit.domain.chat.dto.request;
+package com.study.mindit.domain.chat.dto.obsession.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ConversationItemDTO {
+public class OBConversationDTO {
 
     private String role;
 

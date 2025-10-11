@@ -1,4 +1,4 @@
-package com.study.mindit.domain.chat.dto.response;
+package com.study.mindit.domain.chat.dto.obsession.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -12,19 +12,11 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatResponseDTO_5 {
+public class OBChatRequestDTO_2 {
+
+    @JsonProperty("conversation_history")
+    private List<OBConversationDTO> conversationHistory;
 
     @JsonProperty("session_id")
     private String sessionId;
-
-    @JsonProperty("intro_message")
-    private String introMessage;
-
-    @JsonProperty("question")
-    private String question;
-
-    @JsonProperty("situations")
-    private List<String> situations;
 }
-
-

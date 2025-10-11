@@ -1,4 +1,4 @@
-package com.study.mindit.domain.chat.dto.response;
+package com.study.mindit.domain.chat.dto.obsession.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -12,7 +12,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatResponseDTO_6 {
+public class OBChatResponseDTO_6 {
 
     @JsonProperty("session_id")
     private String sessionId;
@@ -21,7 +21,7 @@ public class ChatResponseDTO_6 {
     private String introMessage;
 
     @JsonProperty("anxiety_hierarchy")
-    private List<AnxietyHierarchyItemDTO> anxietyHierarchy;
+    private List<OBAnxietyHierarchyDTO> anxietyHierarchy;
 
     @JsonProperty("practice_message")
     private String practiceMessage;

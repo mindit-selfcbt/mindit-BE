@@ -13,17 +13,14 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatRoom extends BaseDocument {
+public class OBChatRoom extends BaseDocument {
 
     @Field("room_type")
     private RoomType roomType;
-
-    @Field("session_id")
-    private String sessionId;
     
     @Field("conversation_history")
     @Builder.Default
-    private List<ConversationItem> conversationHistory = new ArrayList<>();
+    private List<OBConversation> conversationHistory = new ArrayList<>();
     
     @Field("current_step")
     @Builder.Default
@@ -39,7 +36,7 @@ public class ChatRoom extends BaseDocument {
             this.conversationHistory = new ArrayList<>();
         }
         this.conversationHistory.add(
-            ConversationItem.builder()
+            OBConversation.builder()
                 .role(role)
                 .content(content)
                 .build()
