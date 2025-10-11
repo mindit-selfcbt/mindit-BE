@@ -53,6 +53,11 @@ public class OBChatRoom extends BaseDocument {
         this.currentStep = step;
     }
     
+    // 대화 기록 설정
+    public void setConversationHistory(List<OBConversation> conversationHistory) {
+        this.conversationHistory = conversationHistory;
+    }
+    
     // 임시 선택된 상황들 설정
     public void setTempSelectedSituations(List<String> situations) {
         this.tempSelectedSituations = situations;
