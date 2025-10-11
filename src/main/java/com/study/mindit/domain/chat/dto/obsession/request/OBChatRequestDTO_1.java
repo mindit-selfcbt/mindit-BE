@@ -1,4 +1,4 @@
-package com.study.mindit.domain.chat.dto.response;
+package com.study.mindit.domain.chat.dto.obsession.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -10,9 +10,10 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatResponseDTO_2 {
+public class OBChatRequestDTO_1 {
 
-    private String response;
+    @JsonProperty("user_text")
+    private Object content;  // String 또는 구조화된 객체 모두 허용
 
     @JsonProperty("session_id")
     private String sessionId;

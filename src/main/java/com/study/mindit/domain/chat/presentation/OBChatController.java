@@ -1,10 +1,10 @@
 package com.study.mindit.domain.chat.presentation;
 
-import com.study.mindit.domain.chat.application.ChatService;
-import com.study.mindit.domain.chat.domain.ChatRoom;
+import com.study.mindit.domain.chat.application.OBChatService;
+import com.study.mindit.domain.chat.domain.OBChatRoom;
 import com.study.mindit.domain.chat.domain.RoomType;
-import com.study.mindit.domain.chat.dto.request.ChatRequestDTO_1;
-import com.study.mindit.domain.chat.dto.response.ChatRoomResponseDTO;
+import com.study.mindit.domain.chat.dto.obsession.request.OBChatRequestDTO_1;
+import com.study.mindit.domain.chat.dto.obsession.response.OBChatRoomResponseDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -20,15 +20,15 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/chat")
-public class ChatController {
+public class OBChatController {
 
-    private final ChatService chatService;
+    private final OBChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
 
     // WebSocket - 메시지 주고받기
     @MessageMapping("/message/{sessionId}")
     public void processMessage(
-            @DestinationVariable String sessionId, @Payload ChatRequestDTO_1 chatRequest) {
+            @DestinationVariable String sessionId, @Payload OBChatRequestDTO_1 chatRequest) {
         
         log.info("=== WebSocket 메시지 수신됨! ===");
         log.info("sessionId: {}", sessionId);
@@ -53,7 +53,7 @@ public class ChatController {
 
     // REST API - 채팅방 생성
     @PostMapping("/room")
-    public Mono<ResponseEntity<ChatRoomResponseDTO>> createChatRoom(
+    public Mono<ResponseEntity<OBChatRoomResponseDTO>> createChatRoom(
             @RequestParam RoomType roomType) {
         return chatService.createChatRoom(roomType)
                 .map(savedRoom -> ResponseEntity.ok(savedRoom));
@@ -61,13 +61,13 @@ public class ChatController {
 
     // REST API - 채팅방 목록 조회
     @GetMapping("/room")
-    public Flux<ChatRoomResponseDTO> getChatRooms() {
+    public Flux<OBChatRoomResponseDTO> getChatRooms() {
         return chatService.getChatRooms();
     }
 
     // REST API - 채팅방의 메시지 목록 조회
     @GetMapping("/room/{sessionId}")
-    public Mono<ResponseEntity<ChatRoom>> getChatMessages(@PathVariable String sessionId) {
+    public Mono<ResponseEntity<OBChatRoom>> getChatMessages(@PathVariable String sessionId) {
         return chatService.getChatMessages(sessionId)
                 .map(chatRoom -> ResponseEntity.ok(chatRoom))
                 .defaultIfEmpty(ResponseEntity.notFound().build());
