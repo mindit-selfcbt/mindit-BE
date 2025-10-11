@@ -99,36 +99,29 @@ public class OBChatService {
         
         if (aiResponseDto instanceof OBChatResponseDTO_1) {
             OBChatResponseDTO_1 res1 = (OBChatResponseDTO_1) aiResponseDto;
-            String aiContent = res1.getQuestion();
-            chatRoom.addConversation("assistant", aiContent);
+            chatRoom.addConversation("assistant", aiResponseDto);
             
             return OBChatRoomRepository.save(chatRoom)
                     .map(savedRoom -> buildChatResponseStep1(savedRoom, res1.getQuestion(), res1.getChoices()));
                     
         } else if (aiResponseDto instanceof OBChatResponseDTO_2) {
             OBChatResponseDTO_2 res2 = (OBChatResponseDTO_2) aiResponseDto;
-            String aiContent = res2.getResponse();
-            chatRoom.addConversation("assistant", aiContent);
+            chatRoom.addConversation("assistant", aiResponseDto);
             
             return OBChatRoomRepository.save(chatRoom)
-                    .map(savedRoom -> buildChatResponseStep2(savedRoom, aiContent));
+                    .map(savedRoom -> buildChatResponseStep2(savedRoom, res2.getResponse()));
                     
         } else if (aiResponseDto instanceof OBChatResponseDTO_3) {
             OBChatResponseDTO_3 res3 = (OBChatResponseDTO_3) aiResponseDto;
-            String aiContent = res3.getGratitudeMessage();
-            chatRoom.addConversation("assistant", aiContent);
+            chatRoom.addConversation("assistant", aiResponseDto);
             
             return OBChatRoomRepository.save(chatRoom)
                     .map(savedRoom -> buildChatResponseStep3(savedRoom, res3.getQuestion(), 
-                            res3.getUserPatternSummary(), res3.getThoughtExamples(), aiContent));
+                            res3.getUserPatternSummary(), res3.getThoughtExamples(), res3.getGratitudeMessage()));
                             
         } else if (aiResponseDto instanceof OBChatResponseDTO_4) {
             OBChatResponseDTO_4 res4 = (OBChatResponseDTO_4) aiResponseDto;
-            // Step 4는 userPatternSummary + categoryMessage + encouragement를 모두 합쳐서 저장
-            String aiContent = res4.getUserPatternSummary() + "\n\n" + 
-                               res4.getCategoryMessage() + "\n\n" + 
-                               res4.getEncouragement();
-            chatRoom.addConversation("assistant", aiContent);
+            chatRoom.addConversation("assistant", aiResponseDto);
             
             return OBChatRoomRepository.save(chatRoom)
                     .map(savedRoom -> buildChatResponseStep4(savedRoom, res4.getUserPatternSummary(), 
@@ -136,9 +129,7 @@ public class OBChatService {
                             
         } else if (aiResponseDto instanceof OBChatResponseDTO_5) {
             OBChatResponseDTO_5 res7 = (OBChatResponseDTO_5) aiResponseDto;
-            // Step 7은 introMessage + question을 합쳐서 저장
-            String aiContent = res7.getIntroMessage() + "\n\n" + res7.getQuestion();
-            chatRoom.addConversation("assistant", aiContent);
+            chatRoom.addConversation("assistant", aiResponseDto);
             
             return OBChatRoomRepository.save(chatRoom)
                     .map(savedRoom -> buildChatResponseStep7(savedRoom, res7.getIntroMessage(), 
@@ -146,12 +137,7 @@ public class OBChatService {
                             
         } else if (aiResponseDto instanceof OBChatResponseDTO_6) {
             OBChatResponseDTO_6 res9 = (OBChatResponseDTO_6) aiResponseDto;
-            // Step 9는 모든 메시지를 합쳐서 저장
-            String aiContent = res9.getIntroMessage() + "\n\n" + 
-                               res9.getPracticeMessage() + "\n\n" + 
-                               res9.getExampleMessage() + "\n\n" + 
-                               res9.getSupportMessage();
-            chatRoom.addConversation("assistant", aiContent);
+            chatRoom.addConversation("assistant", aiResponseDto);
             
             return OBChatRoomRepository.save(chatRoom)
                     .map(savedRoom -> buildChatResponseStep9(savedRoom, res9.getIntroMessage(), 
@@ -235,11 +221,11 @@ public class OBChatService {
                 chatRoom.getConversationHistory().get(chatRoom.getConversationHistory().size() - 1);
             
             Object content = lastUserMessage.getContent();
-            
+
             // content가 Map 형태인지 확인
             if (content instanceof java.util.Map) {
                 java.util.Map<String, Object> contentMap = (java.util.Map<String, Object>) content;
-                
+
                 // selected_situations 추출
                 if (contentMap.containsKey("selected_situations")) {
                     List<String> situations = (List<String>) contentMap.get("selected_situations");
@@ -254,7 +240,7 @@ public class OBChatService {
         if (chatRoom.getTempSelectedSituations() == null || chatRoom.getTempSelectedSituations().isEmpty()) {
             return;
         }
-        
+
         // 마지막 사용자 메시지 가져오기 (Step 9의 점수 입력)
         OBConversation lastUserMessage =
             chatRoom.getConversationHistory().get(chatRoom.getConversationHistory().size() - 1);
@@ -318,5 +304,15 @@ public class OBChatService {
     // 특정 채팅방 메시지 목록 조회 - conversation_history 반환
     public Mono<OBChatRoom> getChatMessages(String sessionId) {
         return OBChatRoomRepository.findById(sessionId);
+    }
+    
+    // 채팅방 Step 설정 (테스트용)
+    public Mono<OBChatRoom> setStep(String sessionId, int step) {
+        return OBChatRoomRepository.findById(sessionId)
+                .flatMap(chatRoom -> {
+                    chatRoom.setCurrentStep(step);
+                    return OBChatRoomRepository.save(chatRoom);
+                })
+                .switchIfEmpty(Mono.error(new RuntimeException("ChatRoom을 찾을 수 없습니다: " + sessionId)));
     }
 }
