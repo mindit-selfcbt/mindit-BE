@@ -29,7 +29,7 @@ public class ChatService {
         log.info("=== ChatService.processChatMessage 시작 ===");
         log.info("입력: {}", chatRequestDto);
         
-        return chatRoomRepository.findById(chatRequestDto.getSessionId())
+        return chatRoomRepository.findBySessionId(chatRequestDto.getSessionId())
                 .flatMap(chatRoom -> {
                     log.info("=== ChatRoom 조회 완료. 현재 Step: {} ===", chatRoom.getCurrentStep());
                     
@@ -319,6 +319,6 @@ public class ChatService {
 
     // 특정 채팅방 메시지 목록 조회 - conversation_history 반환
     public Mono<ChatRoom> getChatMessages(String sessionId) {
-        return chatRoomRepository.findById(sessionId);
+        return chatRoomRepository.findBySessionId(sessionId);
     }
 }

@@ -10,7 +10,6 @@ import java.util.List;
 
 @Document(collection = "chat_rooms")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,7 +18,7 @@ public class ChatRoom extends BaseDocument {
     @Field("room_type")
     private RoomType roomType;
 
-    @Field("session_type")
+    @Field("session_id")
     private String sessionId;
     
     @Field("conversation_history")
@@ -32,7 +31,8 @@ public class ChatRoom extends BaseDocument {
     
     @Field("temp_selected_situations")
     private List<String> tempSelectedSituations;
-    
+
+
     // 대화 추가 메서드
     public void addConversation(String role, Object content) {
         if (this.conversationHistory == null) {
@@ -49,5 +49,10 @@ public class ChatRoom extends BaseDocument {
     // Step 증가
     public void incrementStep() {
         this.currentStep++;
+    }
+    
+    // 임시 선택된 상황들 설정
+    public void setTempSelectedSituations(List<String> situations) {
+        this.tempSelectedSituations = situations;
     }
 } 
