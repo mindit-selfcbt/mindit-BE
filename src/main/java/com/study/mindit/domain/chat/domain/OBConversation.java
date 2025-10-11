@@ -13,9 +13,9 @@ import org.springframework.data.mongodb.core.mapping.Field;
 public class OBConversation {
 
     @Field("role")
-    private String role;  // "user" or "assistant"
+    private String role;
 
     @Field("content")
-    private Object content;  // String 또는 구조화된 객체 모두 허용
+    private Object content;
 }
 

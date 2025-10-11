@@ -48,6 +48,11 @@ public class OBChatRoom extends BaseDocument {
         this.currentStep++;
     }
     
+    // Step 설정 (테스트용)
+    public void setCurrentStep(int step) {
+        this.currentStep = step;
+    }
+    
     // 임시 선택된 상황들 설정
     public void setTempSelectedSituations(List<String> situations) {
         this.tempSelectedSituations = situations;

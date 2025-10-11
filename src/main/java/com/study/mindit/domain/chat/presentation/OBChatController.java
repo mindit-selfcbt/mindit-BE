@@ -72,4 +72,19 @@ public class OBChatController {
                 .map(chatRoom -> ResponseEntity.ok(chatRoom))
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
+    
+    // REST API - 채팅방 Step 설정 (테스트용)
+    @PutMapping("/room/{sessionId}")
+    public Mono<ResponseEntity<java.util.Map<String, Object>>> setStep(
+            @PathVariable String sessionId,
+            @RequestParam int step) {
+        return chatService.setStep(sessionId, step)
+                .map(chatRoom -> ResponseEntity.ok(
+                        java.util.Map.<String, Object>of(
+                                "session_id", chatRoom.getId(),
+                                "message", "Step이 " + chatRoom.getCurrentStep() + " 단계로 성공적으로 변경되었습니다."
+                        )
+                ))
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
 }
