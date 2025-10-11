@@ -311,6 +311,20 @@ public class OBChatService {
         return OBChatRoomRepository.findById(sessionId)
                 .flatMap(chatRoom -> {
                     chatRoom.setCurrentStep(step);
+                    
+                    // conversation_history를 해당 step까지만 유지
+                    List<OBConversation> conversationHistory = chatRoom.getConversationHistory();
+                    if (conversationHistory != null && !conversationHistory.isEmpty()) {
+                        // step * 2까지만 유지 (사용자 메시지 + AI 응답 = 2개씩)
+                        int maxItems = step * 2;
+                        if (conversationHistory.size() > maxItems) {
+                            List<OBConversation> trimmedHistory = new ArrayList<>(
+                                conversationHistory.subList(0, maxItems)
+                            );
+                            chatRoom.setConversationHistory(trimmedHistory);
+                        }
+                    }
+                    
                     return OBChatRoomRepository.save(chatRoom);
                 })
                 .switchIfEmpty(Mono.error(new RuntimeException("ChatRoom을 찾을 수 없습니다: " + sessionId)));
