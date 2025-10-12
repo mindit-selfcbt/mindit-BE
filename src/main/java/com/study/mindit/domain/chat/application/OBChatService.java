@@ -45,8 +45,7 @@ public class OBChatService {
 
     // 2-1. Step 4와 5를 연속으로 호출 (Flux로 두 응답을 순차적으로 반환)
     private Flux<OBChatResponseDTO> callAnalyze4And5Together(OBChatRoom chatRoom, String sessionId) {
-        // Step 4 호출
-        Mono<OBChatResponseDTO> step4Response = aiService.callAnalyze4(sessionId, convertToRequestConversationItems(chatRoom))
+        return aiService.callAnalyze4(sessionId, convertToRequestConversationItems(chatRoom))
                 .flatMap(res4 -> {
                     // Step 4 응답을 conversation_history에 추가
                     chatRoom.addConversation("assistant", res4);
@@ -60,29 +59,26 @@ public class OBChatService {
                                     res4.getCategoryMessage(),
                                     res4.getEncouragement()
                             ));
-                });
-        
-        // Step 5 호출
-        Mono<OBChatResponseDTO> step5Response = step4Response
-                .then(aiService.callAnalyze5(sessionId, convertToRequestConversationItems(chatRoom)))
-                .flatMap(res5 -> {
-                    // Step 5 응답을 conversation_history에 추가
-                    chatRoom.addConversation("assistant", res5);
-                    // incrementStep() 하지 않음! 다음 사용자 메시지에서 processChatMessage가 Step 6으로 증가시킴
-                    
-                    // ChatRoom 저장 후 Step 5 응답 반환
-                    return OBChatRoomRepository.save(chatRoom)
-                            .map(savedRoom -> buildChatResponseStep2(savedRoom, res5.getResponse()));
-                });
-        
-        // Step 4 응답 먼저, 그 다음 Step 5 응답
-        return Flux.concat(step4Response, step5Response);
+                })
+                .flux()
+                .concatWith(
+                    // Step 4가 완료된 후에 Step 5 호출
+                    aiService.callAnalyze5(sessionId, convertToRequestConversationItems(chatRoom))
+                            .flatMap(res5 -> {
+                                // Step 5 응답을 conversation_history에 추가
+                                chatRoom.addConversation("assistant", res5);
+                                // incrementStep() 하지 않음! 다음 사용자 메시지에서 processChatMessage가 Step 6으로 증가시킴
+                                
+                                // ChatRoom 저장 후 Step 5 응답 반환
+                                return OBChatRoomRepository.save(chatRoom)
+                                        .map(savedRoom -> buildChatResponseStep2(savedRoom, res5.getResponse()));
+                            })
+                );
     }
     
     // 2-2. Step 6과 7을 연속으로 호출 (Flux로 두 응답을 순차적으로 반환)
     private Flux<OBChatResponseDTO> callAnalyze6And7Together(OBChatRoom chatRoom, String sessionId) {
-        // Step 6 호출
-        Mono<OBChatResponseDTO> step6Response = aiService.callAnalyze6(sessionId, convertToRequestConversationItems(chatRoom))
+        return aiService.callAnalyze6(sessionId, convertToRequestConversationItems(chatRoom))
                 .flatMap(res6 -> {
                     // Step 6 응답을 conversation_history에 추가
                     chatRoom.addConversation("assistant", res6);
@@ -91,28 +87,26 @@ public class OBChatService {
                     // ChatRoom 저장 후 Step 6 응답 반환
                     return OBChatRoomRepository.save(chatRoom)
                             .map(savedRoom -> buildChatResponseStep2(savedRoom, res6.getResponse()));
-                });
-        
-        // Step 7 호출
-        Mono<OBChatResponseDTO> step7Response = step6Response
-                .then(aiService.callAnalyze7(sessionId, convertToRequestConversationItems(chatRoom)))
-                .flatMap(res7 -> {
-                    // Step 7 응답을 conversation_history에 추가
-                    chatRoom.addConversation("assistant", res7);
-                    // incrementStep() 하지 않음! 다음 사용자 메시지에서 processChatMessage가 Step 8로 증가시킴
-                    
-                    // ChatRoom 저장 후 Step 7 응답 반환
-                    return OBChatRoomRepository.save(chatRoom)
-                            .map(savedRoom -> buildChatResponseStep7(
-                                    savedRoom,
-                                    res7.getIntroMessage(),
-                                    res7.getQuestion(),
-                                    res7.getSituations()
-                            ));
-                });
-        
-        // Step 6 응답 먼저, 그 다음 Step 7 응답
-        return Flux.concat(step6Response, step7Response);
+                })
+                .flux()
+                .concatWith(
+                    // Step 6이 완료된 후에 Step 7 호출
+                    aiService.callAnalyze7(sessionId, convertToRequestConversationItems(chatRoom))
+                            .flatMap(res7 -> {
+                                // Step 7 응답을 conversation_history에 추가
+                                chatRoom.addConversation("assistant", res7);
+                                // incrementStep() 하지 않음! 다음 사용자 메시지에서 processChatMessage가 Step 8로 증가시킴
+                                
+                                // ChatRoom 저장 후 Step 7 응답 반환
+                                return OBChatRoomRepository.save(chatRoom)
+                                        .map(savedRoom -> buildChatResponseStep7(
+                                                savedRoom,
+                                                res7.getIntroMessage(),
+                                                res7.getQuestion(),
+                                                res7.getSituations()
+                                        ));
+                            })
+                );
     }
 
     // 2. FastAPI 호출 및 ChatRoom 업데이트
