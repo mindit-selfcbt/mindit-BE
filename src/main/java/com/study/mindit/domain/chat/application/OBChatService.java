@@ -24,12 +24,12 @@ public class OBChatService {
     private final OBAiService aiService;
 
     // 1. 전체 로직의 시작점이자 흐름을 조정하는 역할
-    public Mono<OBChatResponseDTO> processChatMessage(OBChatRequestDTO_1 chatRequestDto) {
+    public Flux<OBChatResponseDTO> processChatMessage(OBChatRequestDTO_1 chatRequestDto) {
         log.info("=== ChatService.processChatMessage 시작 ===");
         log.info("입력: {}", chatRequestDto);
         
         return OBChatRoomRepository.findById(chatRequestDto.getSessionId())
-                .flatMap(chatRoom -> {
+                .flatMapMany(chatRoom -> {
                     log.info("=== ChatRoom 조회 완료. 현재 Step: {} ===", chatRoom.getCurrentStep());
                     
                     // 사용자 메시지를 conversation_history에 추가
@@ -38,16 +38,98 @@ public class OBChatService {
                     int nextStep = chatRoom.getCurrentStep();
                     
                     return OBChatRoomRepository.save(chatRoom)
-                            .flatMap(savedRoom -> callFastApiAndUpdateRoom(savedRoom, nextStep));
+                            .flatMapMany(savedRoom -> callFastApiAndUpdateRoom(savedRoom, nextStep));
                 })
-                .switchIfEmpty(Mono.error(new RuntimeException("ChatRoom을 찾을 수 없습니다: " + chatRequestDto.getSessionId())));
+                .switchIfEmpty(Flux.error(new RuntimeException("ChatRoom을 찾을 수 없습니다: " + chatRequestDto.getSessionId())));
+    }
+
+    // 2-1. Step 4와 5를 연속으로 호출 (Flux로 두 응답을 순차적으로 반환)
+    private Flux<OBChatResponseDTO> callAnalyze4And5Together(OBChatRoom chatRoom, String sessionId) {
+        // Step 4 호출
+        Mono<OBChatResponseDTO> step4Response = aiService.callAnalyze4(sessionId, convertToRequestConversationItems(chatRoom))
+                .flatMap(res4 -> {
+                    // Step 4 응답을 conversation_history에 추가
+                    chatRoom.addConversation("assistant", res4);
+                    chatRoom.incrementStep(); // Step 5로 증가
+                    
+                    // ChatRoom 저장 후 Step 4 응답 반환
+                    return OBChatRoomRepository.save(chatRoom)
+                            .map(savedRoom -> buildChatResponseStep4(
+                                    savedRoom,
+                                    res4.getUserPatternSummary(),
+                                    res4.getCategoryMessage(),
+                                    res4.getEncouragement()
+                            ));
+                });
+        
+        // Step 5 호출
+        Mono<OBChatResponseDTO> step5Response = step4Response
+                .then(aiService.callAnalyze5(sessionId, convertToRequestConversationItems(chatRoom)))
+                .flatMap(res5 -> {
+                    // Step 5 응답을 conversation_history에 추가
+                    chatRoom.addConversation("assistant", res5);
+                    // incrementStep() 하지 않음! 다음 사용자 메시지에서 processChatMessage가 Step 6으로 증가시킴
+                    
+                    // ChatRoom 저장 후 Step 5 응답 반환
+                    return OBChatRoomRepository.save(chatRoom)
+                            .map(savedRoom -> buildChatResponseStep2(savedRoom, res5.getResponse()));
+                });
+        
+        // Step 4 응답 먼저, 그 다음 Step 5 응답
+        return Flux.concat(step4Response, step5Response);
+    }
+    
+    // 2-2. Step 6과 7을 연속으로 호출 (Flux로 두 응답을 순차적으로 반환)
+    private Flux<OBChatResponseDTO> callAnalyze6And7Together(OBChatRoom chatRoom, String sessionId) {
+        // Step 6 호출
+        Mono<OBChatResponseDTO> step6Response = aiService.callAnalyze6(sessionId, convertToRequestConversationItems(chatRoom))
+                .flatMap(res6 -> {
+                    // Step 6 응답을 conversation_history에 추가
+                    chatRoom.addConversation("assistant", res6);
+                    chatRoom.incrementStep(); // Step 7로 증가
+                    
+                    // ChatRoom 저장 후 Step 6 응답 반환
+                    return OBChatRoomRepository.save(chatRoom)
+                            .map(savedRoom -> buildChatResponseStep2(savedRoom, res6.getResponse()));
+                });
+        
+        // Step 7 호출
+        Mono<OBChatResponseDTO> step7Response = step6Response
+                .then(aiService.callAnalyze7(sessionId, convertToRequestConversationItems(chatRoom)))
+                .flatMap(res7 -> {
+                    // Step 7 응답을 conversation_history에 추가
+                    chatRoom.addConversation("assistant", res7);
+                    // incrementStep() 하지 않음! 다음 사용자 메시지에서 processChatMessage가 Step 8로 증가시킴
+                    
+                    // ChatRoom 저장 후 Step 7 응답 반환
+                    return OBChatRoomRepository.save(chatRoom)
+                            .map(savedRoom -> buildChatResponseStep7(
+                                    savedRoom,
+                                    res7.getIntroMessage(),
+                                    res7.getQuestion(),
+                                    res7.getSituations()
+                            ));
+                });
+        
+        // Step 6 응답 먼저, 그 다음 Step 7 응답
+        return Flux.concat(step6Response, step7Response);
     }
 
     // 2. FastAPI 호출 및 ChatRoom 업데이트
-    private Mono<OBChatResponseDTO> callFastApiAndUpdateRoom(OBChatRoom chatRoom, int step) {
+    private Flux<OBChatResponseDTO> callFastApiAndUpdateRoom(OBChatRoom chatRoom, int step) {
         String sessionId = chatRoom.getId();
         
-        // Step별로 AI 호출
+        // Step 4는 특별 처리 (Step 4와 5를 연속으로 호출)
+        if (step == 4) {
+            return callAnalyze4And5Together(chatRoom, sessionId);
+        }
+        
+        // Step 6도 특별 처리 (Step 6과 7을 연속으로 호출)
+        if (step == 6) {
+            return callAnalyze6And7Together(chatRoom, sessionId);
+        }
+        
+        // 나머지 Step들은 단일 응답
         Mono<Object> aiResponseMono;
         switch (step) {
             case 1:
@@ -60,14 +142,8 @@ public class OBChatService {
             case 3:
                 aiResponseMono = aiService.callAnalyze3(sessionId, convertToRequestConversationItems(chatRoom)).map(response -> (Object) response);
                 break;
-            case 4:
-                aiResponseMono = aiService.callAnalyze4(sessionId, convertToRequestConversationItems(chatRoom)).map(response -> (Object) response);
-                break;
             case 5:
                 aiResponseMono = aiService.callAnalyze5(sessionId, convertToRequestConversationItems(chatRoom)).map(response -> (Object) response);
-                break;
-            case 6:
-                aiResponseMono = aiService.callAnalyze6(sessionId, convertToRequestConversationItems(chatRoom)).map(response -> (Object) response);
                 break;
             case 7:
                 aiResponseMono = aiService.callAnalyze7(sessionId, convertToRequestConversationItems(chatRoom)).map(response -> (Object) response);
@@ -79,10 +155,12 @@ public class OBChatService {
                 aiResponseMono = aiService.callAnalyze9(sessionId, convertToRequestConversationItems(chatRoom)).map(response -> (Object) response);
                 break;
             default:
-                return Mono.error(new IllegalArgumentException("잘못된 대화 단계입니다: " + step));
+                return Flux.error(new IllegalArgumentException("잘못된 대화 단계입니다: " + step));
         }
         
-        return aiResponseMono.flatMap(aiResponseDto -> updateRoomWithAiResponse(chatRoom, aiResponseDto, step));
+        return aiResponseMono
+                .flatMap(aiResponseDto -> updateRoomWithAiResponse(chatRoom, aiResponseDto, step))
+                .flux();
     }
 
     // 3. AI 응답으로 ChatRoom 업데이트
@@ -127,16 +205,16 @@ public class OBChatService {
                     .map(savedRoom -> buildChatResponseStep4(savedRoom, res4.getUserPatternSummary(), 
                             res4.getCategoryMessage(), res4.getEncouragement()));
                             
-        } else if (aiResponseDto instanceof OBChatResponseDTO_5) {
-            OBChatResponseDTO_5 res7 = (OBChatResponseDTO_5) aiResponseDto;
+        } else if (aiResponseDto instanceof OBChatResponseDTO_7) {
+            OBChatResponseDTO_7 res7 = (OBChatResponseDTO_7) aiResponseDto;
             chatRoom.addConversation("assistant", aiResponseDto);
             
             return OBChatRoomRepository.save(chatRoom)
                     .map(savedRoom -> buildChatResponseStep7(savedRoom, res7.getIntroMessage(), 
                             res7.getQuestion(), res7.getSituations()));
                             
-        } else if (aiResponseDto instanceof OBChatResponseDTO_6) {
-            OBChatResponseDTO_6 res9 = (OBChatResponseDTO_6) aiResponseDto;
+        } else if (aiResponseDto instanceof OBChatResponseDTO_9) {
+            OBChatResponseDTO_9 res9 = (OBChatResponseDTO_9) aiResponseDto;
             chatRoom.addConversation("assistant", aiResponseDto);
             
             return OBChatRoomRepository.save(chatRoom)
@@ -203,14 +281,63 @@ public class OBChatService {
     private OBChatResponseDTO buildChatResponseStep9(OBChatRoom chatRoom, String introMessage,
                                                      List<OBAnxietyHierarchyDTO> anxietyHierarchy,
                                                      String practiceMessage, String exampleMessage, String supportMessage) {
+        
+        // anxiety_hierarchy가 비어있으면 생성
+        List<OBAnxietyHierarchyDTO> finalAnxietyHierarchy = anxietyHierarchy;
+        if (anxietyHierarchy == null || anxietyHierarchy.isEmpty()) {
+            finalAnxietyHierarchy = createAnxietyHierarchyFromChatRoom(chatRoom);
+        }
+        
         return OBChatResponseDTO.builder()
                 .introMessage(introMessage)
-                .anxietyHierarchy(anxietyHierarchy)
+                .anxietyHierarchy(finalAnxietyHierarchy)
                 .practiceMessage(practiceMessage)
                 .exampleMessage(exampleMessage)
                 .supportMessage(supportMessage)
                 .sessionId(chatRoom.getId())
                 .build();
+    }
+    
+    // ChatRoom에서 anxiety_hierarchy 생성
+    private List<OBAnxietyHierarchyDTO> createAnxietyHierarchyFromChatRoom(OBChatRoom chatRoom) {
+        List<OBAnxietyHierarchyDTO> anxietyHierarchy = new ArrayList<>();
+        
+        // conversation_history에서 anxiety_scores 데이터 찾기
+        if (chatRoom.getConversationHistory() != null) {
+            for (OBConversation conversation : chatRoom.getConversationHistory()) {
+                Object content = conversation.getContent();
+                
+                if (content instanceof java.util.Map) {
+                    java.util.Map<String, Object> contentMap = (java.util.Map<String, Object>) content;
+                    
+                    if ("anxiety_scores".equals(contentMap.get("type"))) {
+                        java.util.Map<String, Object> data = (java.util.Map<String, Object>) contentMap.get("data");
+                        java.util.List<java.util.Map<String, Object>> situations = 
+                            (java.util.List<java.util.Map<String, Object>>) data.get("situations");
+                        
+                        // 점수순으로 정렬
+                        situations.sort((a, b) -> {
+                            Integer scoreA = (Integer) a.get("score");
+                            Integer scoreB = (Integer) b.get("score");
+                            return scoreA.compareTo(scoreB);
+                        });
+                        
+                        // OBAnxietyHierarchyDTO로 변환
+                        for (int i = 0; i < situations.size(); i++) {
+                            java.util.Map<String, Object> situation = situations.get(i);
+                            anxietyHierarchy.add(OBAnxietyHierarchyDTO.builder()
+                                    .order(i + 1)
+                                    .situation((String) situation.get("situation"))
+                                    .score((Integer) situation.get("score"))
+                                    .build());
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        
+        return anxietyHierarchy;
     }
 
     // Step 8: conversation_history에서 선택된 상황 추출하여 저장

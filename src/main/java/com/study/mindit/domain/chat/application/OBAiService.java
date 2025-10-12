@@ -9,8 +9,8 @@ import com.study.mindit.domain.chat.dto.obsession.response.OBChatResponseDTO_1;
 import com.study.mindit.domain.chat.dto.obsession.response.OBChatResponseDTO_2;
 import com.study.mindit.domain.chat.dto.obsession.response.OBChatResponseDTO_3;
 import com.study.mindit.domain.chat.dto.obsession.response.OBChatResponseDTO_4;
-import com.study.mindit.domain.chat.dto.obsession.response.OBChatResponseDTO_5;
-import com.study.mindit.domain.chat.dto.obsession.response.OBChatResponseDTO_6;
+import com.study.mindit.domain.chat.dto.obsession.response.OBChatResponseDTO_7;
+import com.study.mindit.domain.chat.dto.obsession.response.OBChatResponseDTO_9;
 import com.study.mindit.global.fastApi.FastApiUrls;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -93,12 +93,12 @@ public class OBAiService {
     }
 
     // analyze7 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_7로 받음)
-    public Mono<OBChatResponseDTO_5> callAnalyze7(String sessionId, List<OBConversationDTO> conversationHistory) {
+    public Mono<OBChatResponseDTO_7> callAnalyze7(String sessionId, List<OBConversationDTO> conversationHistory) {
         OBChatRequestDTO_2 requestBody = OBChatRequestDTO_2.builder()
                 .conversationHistory(conversationHistory)
                 .sessionId(sessionId)
                 .build();
-        return callFastApiEndpoint(fastApiUrls.getAnalyze7(), requestBody, OBChatResponseDTO_5.class);
+        return callFastApiEndpoint(fastApiUrls.getAnalyze7(), requestBody, OBChatResponseDTO_7.class);
     }
 
     // analyze8 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_2로 받음)
@@ -110,13 +110,13 @@ public class OBAiService {
         return callFastApiEndpoint(fastApiUrls.getAnalyze8(), requestBody, OBChatResponseDTO_2.class);
     }
 
-    // analyze9 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_6로 받음)
-    public Mono<OBChatResponseDTO_6> callAnalyze9(String sessionId, List<OBConversationDTO> conversationHistory) {
+    // analyze9 엔드포인트에 요청 (응답 DTO를 ChatResponseDTO_9로 받음)
+    public Mono<OBChatResponseDTO_9> callAnalyze9(String sessionId, List<OBConversationDTO> conversationHistory) {
         OBChatRequestDTO_2 requestBody = OBChatRequestDTO_2.builder()
                 .conversationHistory(conversationHistory)
                 .sessionId(sessionId)
                 .build();
-        return callFastApiEndpoint(fastApiUrls.getAnalyze9(), requestBody, OBChatResponseDTO_6.class);
+        return callFastApiEndpoint(fastApiUrls.getAnalyze9(), requestBody, OBChatResponseDTO_9.class);
     }
 
     // 요청과 응답 타입을 범용적으로 처리하는 메서드
