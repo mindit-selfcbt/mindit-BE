@@ -167,6 +167,7 @@ public class OBChatService {
         // Step 9: 점수 배열을 상황과 매핑
         if (step == 9) {
             mapScoresToSituations(chatRoom);
+            log.info("=== Step 9: mapScoresToSituations 완료 ===");
         }
         
         if (aiResponseDto instanceof OBChatResponseDTO_1) {
@@ -211,10 +212,15 @@ public class OBChatService {
             OBChatResponseDTO_9 res9 = (OBChatResponseDTO_9) aiResponseDto;
             chatRoom.addConversation("assistant", aiResponseDto);
             
+            // Step 9는 항상 chatRoom에서 anxiety_hierarchy를 생성
             return OBChatRoomRepository.save(chatRoom)
-                    .map(savedRoom -> buildChatResponseStep9(savedRoom, res9.getIntroMessage(), 
-                            res9.getAnxietyHierarchy(), res9.getPracticeMessage(), 
-                            res9.getExampleMessage(), res9.getSupportMessage()));
+                    .map(savedRoom -> {
+                        List<OBAnxietyHierarchyDTO> anxietyHierarchy = createAnxietyHierarchyFromChatRoom(savedRoom);
+                        log.info("=== Step 9: anxiety_hierarchy 생성 완료. 크기: {} ===", anxietyHierarchy.size());
+                        return buildChatResponseStep9(savedRoom, res9.getIntroMessage(), 
+                                anxietyHierarchy, res9.getPracticeMessage(), 
+                                res9.getExampleMessage(), res9.getSupportMessage());
+                    });
         }
         
         return Mono.error(new RuntimeException("Unknown response type"));
@@ -276,15 +282,9 @@ public class OBChatService {
                                                      List<OBAnxietyHierarchyDTO> anxietyHierarchy,
                                                      String practiceMessage, String exampleMessage, String supportMessage) {
         
-        // anxiety_hierarchy가 비어있으면 생성
-        List<OBAnxietyHierarchyDTO> finalAnxietyHierarchy = anxietyHierarchy;
-        if (anxietyHierarchy == null || anxietyHierarchy.isEmpty()) {
-            finalAnxietyHierarchy = createAnxietyHierarchyFromChatRoom(chatRoom);
-        }
-        
         return OBChatResponseDTO.builder()
                 .introMessage(introMessage)
-                .anxietyHierarchy(finalAnxietyHierarchy)
+                .anxietyHierarchy(anxietyHierarchy)
                 .practiceMessage(practiceMessage)
                 .exampleMessage(exampleMessage)
                 .supportMessage(supportMessage)
@@ -296,40 +296,72 @@ public class OBChatService {
     private List<OBAnxietyHierarchyDTO> createAnxietyHierarchyFromChatRoom(OBChatRoom chatRoom) {
         List<OBAnxietyHierarchyDTO> anxietyHierarchy = new ArrayList<>();
         
+        log.info("=== createAnxietyHierarchyFromChatRoom 시작 ===");
+        
         // conversation_history에서 anxiety_scores 데이터 찾기
         if (chatRoom.getConversationHistory() != null) {
-            for (OBConversation conversation : chatRoom.getConversationHistory()) {
+            log.info("conversation_history 크기: {}", chatRoom.getConversationHistory().size());
+            
+            for (int idx = 0; idx < chatRoom.getConversationHistory().size(); idx++) {
+                OBConversation conversation = chatRoom.getConversationHistory().get(idx);
                 Object content = conversation.getContent();
+                
+                log.info("conversation[{}] - role: {}, content type: {}", idx, conversation.getRole(), 
+                         content != null ? content.getClass().getSimpleName() : "null");
                 
                 if (content instanceof java.util.Map) {
                     java.util.Map<String, Object> contentMap = (java.util.Map<String, Object>) content;
+                    Object typeValue = contentMap.get("type");
                     
-                    if ("anxiety_scores".equals(contentMap.get("type"))) {
+                    log.info("conversation[{}] - Map의 type: {}", idx, typeValue);
+                    
+                    if ("anxiety_scores".equals(typeValue)) {
+                        log.info("=== anxiety_scores 찾음! ===");
+                        
                         java.util.Map<String, Object> data = (java.util.Map<String, Object>) contentMap.get("data");
-                        java.util.List<java.util.Map<String, Object>> situations = 
-                            (java.util.List<java.util.Map<String, Object>>) data.get("situations");
-                        
-                        // 점수순으로 정렬
-                        situations.sort((a, b) -> {
-                            Integer scoreA = (Integer) a.get("score");
-                            Integer scoreB = (Integer) b.get("score");
-                            return scoreA.compareTo(scoreB);
-                        });
-                        
-                        // OBAnxietyHierarchyDTO로 변환
-                        for (int i = 0; i < situations.size(); i++) {
-                            java.util.Map<String, Object> situation = situations.get(i);
-                            anxietyHierarchy.add(OBAnxietyHierarchyDTO.builder()
-                                    .order(i + 1)
-                                    .situation((String) situation.get("situation"))
-                                    .score((Integer) situation.get("score"))
-                                    .build());
+                        if (data != null) {
+                            java.util.List<java.util.Map<String, Object>> situations = 
+                                (java.util.List<java.util.Map<String, Object>>) data.get("situations");
+                            
+                            if (situations != null && !situations.isEmpty()) {
+                                log.info("상황 개수: {}", situations.size());
+                                
+                                // 점수순으로 정렬 (낮은 점수 -> 높은 점수)
+                                situations.sort((a, b) -> {
+                                    Integer scoreA = (Integer) a.get("score");
+                                    Integer scoreB = (Integer) b.get("score");
+                                    return scoreA.compareTo(scoreB);
+                                });
+                                
+                                // OBAnxietyHierarchyDTO로 변환
+                                for (int i = 0; i < situations.size(); i++) {
+                                    java.util.Map<String, Object> situation = situations.get(i);
+                                    String situationText = (String) situation.get("situation");
+                                    Integer score = (Integer) situation.get("score");
+                                    
+                                    log.info("상황[{}] - situation: {}, score: {}", i + 1, situationText, score);
+                                    
+                                    anxietyHierarchy.add(OBAnxietyHierarchyDTO.builder()
+                                            .order(i + 1)
+                                            .situation(situationText)
+                                            .score(score)
+                                            .build());
+                                }
+                                break;
+                            } else {
+                                log.warn("situations가 null이거나 비어있음");
+                            }
+                        } else {
+                            log.warn("data가 null임");
                         }
-                        break;
                     }
                 }
             }
+        } else {
+            log.warn("conversation_history가 null임");
         }
+        
+        log.info("=== createAnxietyHierarchyFromChatRoom 완료. 생성된 항목 수: {} ===", anxietyHierarchy.size());
         
         return anxietyHierarchy;
     }
@@ -358,9 +390,14 @@ public class OBChatService {
     
     // Step 9: 점수 배열을 받아서 상황과 매핑
     private void mapScoresToSituations(OBChatRoom chatRoom) {
+        log.info("=== mapScoresToSituations 시작 ===");
+        
         if (chatRoom.getTempSelectedSituations() == null || chatRoom.getTempSelectedSituations().isEmpty()) {
+            log.warn("tempSelectedSituations가 null이거나 비어있음");
             return;
         }
+
+        log.info("tempSelectedSituations: {}", chatRoom.getTempSelectedSituations());
 
         // 마지막 사용자 메시지 가져오기 (Step 9의 점수 입력)
         OBConversation lastUserMessage =
@@ -368,10 +405,15 @@ public class OBChatService {
         
         Object content = lastUserMessage.getContent();
         
+        log.info("마지막 사용자 메시지 content type: {}", content != null ? content.getClass().getSimpleName() : "null");
+        
         // content가 List (점수 배열)인 경우
         if (content instanceof java.util.List) {
             List<Integer> scores = (List<Integer>) content;
             List<String> situations = chatRoom.getTempSelectedSituations();
+            
+            log.info("점수 배열: {}", scores);
+            log.info("상황 배열: {}", situations);
             
             // 매핑된 객체 생성
             java.util.Map<String, Object> mappedData = new java.util.HashMap<>();
@@ -383,15 +425,23 @@ public class OBChatService {
                 item.put("situation", situations.get(i));
                 item.put("score", scores.get(i));
                 situationScores.add(item);
+                
+                log.info("매핑[{}] - situation: {}, score: {}", i, situations.get(i), scores.get(i));
             }
             
             java.util.Map<String, Object> data = new java.util.HashMap<>();
             data.put("situations", situationScores);
             mappedData.put("data", data);
             
+            log.info("생성된 anxiety_scores 데이터: {}", mappedData);
+            
             // conversation_history의 마지막 항목을 매핑된 객체로 업데이트
             chatRoom.getConversationHistory().remove(chatRoom.getConversationHistory().size() - 1);
             chatRoom.addConversation("user", mappedData);
+            
+            log.info("=== mapScoresToSituations 완료 ===");
+        } else {
+            log.warn("마지막 사용자 메시지가 List 타입이 아님");
         }
     }
     
