@@ -1,7 +1,9 @@
 package com.study.mindit.domain.chat.dto.obsession.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -9,6 +11,22 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+@JsonPropertyOrder({
+    "question",
+    "choices",
+    "response",
+    "gratitude_message",
+    "user_pattern_summary",
+    "thought_examples",
+    "category_message",
+    "encouragement",
+    "intro_message",
+    "situations",
+    "anxiety_hierarchy",
+    "practice_message",
+    "example_message",
+    "support_message"
+})
 @Getter
 @Builder
 @NoArgsConstructor
@@ -54,6 +72,6 @@ public class OBChatResponseDTO {
     @JsonProperty("support_message")
     private String supportMessage;
 
-    @JsonProperty("session_id")
+    @JsonIgnore
     private String sessionId;
 }

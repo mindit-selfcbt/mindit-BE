@@ -12,14 +12,16 @@ import java.util.List;
 
 @JsonPropertyOrder({
     "intro_message",
-    "question",
-    "situations"
+    "anxiety_hierarchy",
+    "practice_message",
+    "example_message",
+    "support_message"
 })
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OBChatResponseDTO_5 {
+public class OBChatResponseDTO_9 {
 
     @JsonIgnore
     private String sessionId;
@@ -27,11 +29,17 @@ public class OBChatResponseDTO_5 {
     @JsonProperty("intro_message")
     private String introMessage;
 
-    @JsonProperty("question")
-    private String question;
+    @JsonProperty("anxiety_hierarchy")
+    private List<OBAnxietyHierarchyDTO> anxietyHierarchy;
 
-    @JsonProperty("situations")
-    private List<String> situations;
+    @JsonProperty("practice_message")
+    private String practiceMessage;
+
+    @JsonProperty("example_message")
+    private String exampleMessage;
+
+    @JsonProperty("support_message")
+    private String supportMessage;
 }
 
 
