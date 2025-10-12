@@ -367,82 +367,73 @@ public class OBChatService {
     }
 
     // Step 8: conversation_history에서 선택된 상황 추출하여 저장
+    // 프론트엔드 형식: {selected_situations: ["상황1", "상황2", ...]}
     private void extractAndSaveSelectedSituations(OBChatRoom chatRoom) {
-        if (chatRoom.getConversationHistory() != null && !chatRoom.getConversationHistory().isEmpty()) {
-            // 마지막 사용자 메시지 가져오기 (Step 8의 상황 선택)
-            OBConversation lastUserMessage =
-                chatRoom.getConversationHistory().get(chatRoom.getConversationHistory().size() - 1);
-            
-            Object content = lastUserMessage.getContent();
-
-            // content가 Map 형태인지 확인
-            if (content instanceof java.util.Map) {
-                java.util.Map<String, Object> contentMap = (java.util.Map<String, Object>) content;
-
-                // selected_situations 추출
-                if (contentMap.containsKey("selected_situations")) {
-                    List<String> situations = (List<String>) contentMap.get("selected_situations");
-                    chatRoom.setTempSelectedSituations(situations);
-                }
-            }
+        if (chatRoom.getConversationHistory() == null || chatRoom.getConversationHistory().isEmpty()) {
+            return;
         }
+        
+        OBConversation lastUserMessage =
+            chatRoom.getConversationHistory().get(chatRoom.getConversationHistory().size() - 1);
+        
+        Object content = lastUserMessage.getContent();
+
+        if (!(content instanceof java.util.Map)) {
+            throw new IllegalArgumentException("Step 8은 반드시 {selected_situations: []} 형식으로 전송해야 합니다.");
+        }
+        
+        java.util.Map<String, Object> contentMap = (java.util.Map<String, Object>) content;
+        
+        if (!contentMap.containsKey("selected_situations")) {
+            throw new IllegalArgumentException("Step 8은 반드시 selected_situations 키를 포함해야 합니다.");
+        }
+        
+        List<String> situations = (List<String>) contentMap.get("selected_situations");
+        chatRoom.setTempSelectedSituations(situations);
+        
+        log.info("Step 8: 저장된 상황 수: {}", situations.size());
     }
     
     // Step 9: 점수 배열을 받아서 상황과 매핑
+    // 프론트엔드 형식: [95, 80, 90, 70]
     private void mapScoresToSituations(OBChatRoom chatRoom) {
-        log.info("=== mapScoresToSituations 시작 ===");
-        
         if (chatRoom.getTempSelectedSituations() == null || chatRoom.getTempSelectedSituations().isEmpty()) {
-            log.warn("tempSelectedSituations가 null이거나 비어있음");
-            return;
+            throw new IllegalStateException("Step 8에서 저장된 상황이 없습니다.");
         }
 
-        log.info("tempSelectedSituations: {}", chatRoom.getTempSelectedSituations());
-
-        // 마지막 사용자 메시지 가져오기 (Step 9의 점수 입력)
         OBConversation lastUserMessage =
             chatRoom.getConversationHistory().get(chatRoom.getConversationHistory().size() - 1);
         
         Object content = lastUserMessage.getContent();
         
-        log.info("마지막 사용자 메시지 content type: {}", content != null ? content.getClass().getSimpleName() : "null");
-        
-        // content가 List (점수 배열)인 경우
-        if (content instanceof java.util.List) {
-            List<Integer> scores = (List<Integer>) content;
-            List<String> situations = chatRoom.getTempSelectedSituations();
-            
-            log.info("점수 배열: {}", scores);
-            log.info("상황 배열: {}", situations);
-            
-            // 매핑된 객체 생성
-            java.util.Map<String, Object> mappedData = new java.util.HashMap<>();
-            mappedData.put("type", "anxiety_scores");
-            
-            java.util.List<java.util.Map<String, Object>> situationScores = new java.util.ArrayList<>();
-            for (int i = 0; i < Math.min(situations.size(), scores.size()); i++) {
-                java.util.Map<String, Object> item = new java.util.HashMap<>();
-                item.put("situation", situations.get(i));
-                item.put("score", scores.get(i));
-                situationScores.add(item);
-                
-                log.info("매핑[{}] - situation: {}, score: {}", i, situations.get(i), scores.get(i));
-            }
-            
-            java.util.Map<String, Object> data = new java.util.HashMap<>();
-            data.put("situations", situationScores);
-            mappedData.put("data", data);
-            
-            log.info("생성된 anxiety_scores 데이터: {}", mappedData);
-            
-            // conversation_history의 마지막 항목을 매핑된 객체로 업데이트
-            chatRoom.getConversationHistory().remove(chatRoom.getConversationHistory().size() - 1);
-            chatRoom.addConversation("user", mappedData);
-            
-            log.info("=== mapScoresToSituations 완료 ===");
-        } else {
-            log.warn("마지막 사용자 메시지가 List 타입이 아님");
+        if (!(content instanceof java.util.List)) {
+            throw new IllegalArgumentException("Step 9는 반드시 List<Integer> 형식으로 전송해야 합니다. 예: [95, 80, 90, 70]");
         }
+        
+        List<Integer> scores = (List<Integer>) content;
+        List<String> situations = chatRoom.getTempSelectedSituations();
+        
+        // 매핑된 객체 생성
+        java.util.Map<String, Object> mappedData = new java.util.HashMap<>();
+        mappedData.put("type", "anxiety_scores");
+        
+        java.util.List<java.util.Map<String, Object>> situationScores = new java.util.ArrayList<>();
+        for (int i = 0; i < Math.min(situations.size(), scores.size()); i++) {
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("situation", situations.get(i));
+            item.put("score", scores.get(i));
+            situationScores.add(item);
+        }
+        
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("situations", situationScores);
+        mappedData.put("data", data);
+        
+        // conversation_history의 마지막 항목을 매핑된 객체로 업데이트
+        chatRoom.getConversationHistory().remove(chatRoom.getConversationHistory().size() - 1);
+        chatRoom.addConversation("user", mappedData);
+        
+        log.info("Step 9: {}개 상황-점수 매핑 완료", situationScores.size());
     }
     
     // ChatRoom의 conversation_history를 Request DTO용 ConversationItem으로 변환
