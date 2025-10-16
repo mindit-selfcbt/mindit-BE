@@ -92,7 +92,7 @@ public class PreventionService {
         
         // anxietyType에 따른 응답 메시지
         String responseMessage;
-        if (request.getAnxietyType() == com.study.mindit.domain.prevention.domain.AnxietyType.BEFORE) {
+        if (request.getAnxietyType() == com.study.mindit.domain.prevention.domain.AnxietyType.START) {
             responseMessage = "이전 불안 정도가 입력되었습니다";
         } else {
             responseMessage = "이후 불안 정도가 입력되었습니다";
