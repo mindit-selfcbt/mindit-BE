@@ -78,10 +78,11 @@ public class PreventionService {
     public Mono<String> inputAnxietyLevel(AnxietyInputRequestDTO request) {
         String sessionId = request.getSessionId();
         
-        // 기존 리포트가 있는지 확인
-        return preventionReportRepository.findBySessionIdAndIsCompletedFalse(sessionId)
+        // 진행 중인 리포트 조회 (null 또는 false 모두 포함)
+        return preventionReportRepository.findBySessionIdAndIsCompletedIsNullOrIsCompletedFalse(sessionId)
                 .switchIfEmpty(Mono.defer(() -> {
-                    // 기존 리포트가 없으면 새로 생성
+                    // 진행 중인 문서가 없으면 새로 생성
+                    log.info("진행 중인 리포트가 없어서 새로 생성 - sessionId: {}", sessionId);
                     PreventionReport newReport = PreventionReport.builder()
                             .sessionId(sessionId)
                             .isCompleted(false)
@@ -122,10 +123,11 @@ public class PreventionService {
     public Mono<String> inputSituation(SituationInputRequestDTO request) {
         String sessionId = request.getSessionId();
         
-        // 기존 리포트가 있는지 확인
-        return preventionReportRepository.findBySessionIdAndIsCompletedFalse(sessionId)
+        // 진행 중인 리포트 조회 (null 또는 false 모두 포함)
+        return preventionReportRepository.findBySessionIdAndIsCompletedIsNullOrIsCompletedFalse(sessionId)
                 .switchIfEmpty(Mono.defer(() -> {
-                    // 기존 리포트가 없으면 새로 생성
+                    // 진행 중인 문서가 없으면 새로 생성
+                    log.info("진행 중인 리포트가 없어서 새로 생성 - sessionId: {}", sessionId);
                     PreventionReport newReport = PreventionReport.builder()
                             .sessionId(sessionId)
                             .isCompleted(false)
@@ -154,10 +156,11 @@ public class PreventionService {
     public Mono<String> inputThought(ThoughtInputRequestDTO request) {
         String sessionId = request.getSessionId();
         
-        // 기존 리포트가 있는지 확인
-        return preventionReportRepository.findBySessionIdAndIsCompletedFalse(sessionId)
+        // 진행 중인 리포트 조회 (null 또는 false 모두 포함)
+        return preventionReportRepository.findBySessionIdAndIsCompletedIsNullOrIsCompletedFalse(sessionId)
                 .switchIfEmpty(Mono.defer(() -> {
-                    // 기존 리포트가 없으면 새로 생성
+                    // 진행 중인 문서가 없으면 새로 생성
+                    log.info("진행 중인 리포트가 없어서 새로 생성 - sessionId: {}", sessionId);
                     PreventionReport newReport = PreventionReport.builder()
                             .sessionId(sessionId)
                             .isCompleted(false)
@@ -186,8 +189,8 @@ public class PreventionService {
     public Mono<ReportResponseDTO> generateReport(ReportRequestDTO request) {
         String sessionId = request.getSessionId();
         
-        // 진행 중인 리포트 조회
-        return preventionReportRepository.findBySessionIdAndIsCompletedFalse(sessionId)
+        // 진행 중인 리포트 조회 (null 또는 false 모두 포함)
+        return preventionReportRepository.findBySessionIdAndIsCompletedIsNullOrIsCompletedFalse(sessionId)
                 .switchIfEmpty(Mono.error(new RuntimeException("저장된 데이터가 없습니다. 먼저 불안정도, 강박상황, 강박사고를 입력해주세요.")))
                 .flatMap(existingReport -> {
                     // 필수 데이터 확인
