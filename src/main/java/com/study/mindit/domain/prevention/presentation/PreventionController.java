@@ -16,9 +16,9 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/prevention")
+@RequestMapping("/api/prevention")
 @RequiredArgsConstructor
-@Tag(name = "Prevention", description = "단순한 반응방지 API")
+@Tag(name = "Prevention", description = "반응방지 API")
 public class PreventionController {
 
     private final PreventionService preventionService;

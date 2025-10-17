@@ -16,5 +16,7 @@ public interface PreventionReportRepository extends ReactiveMongoRepository<Prev
     Flux<PreventionReport> findBySessionIdAndWeekNumber(String sessionId, Integer weekNumber);
     
     Mono<Long> countBySessionIdAndWeekNumber(String sessionId, Integer weekNumber);
+
+    Mono<PreventionReport> findBySessionIdAndIsCompletedFalse(String sessionId);
 }
 

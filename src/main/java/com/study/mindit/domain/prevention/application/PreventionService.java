@@ -17,10 +17,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -29,9 +27,6 @@ public class PreventionService {
 
     private final OBChatRoomRepository chatRoomRepository;
     private final PreventionReportRepository preventionReportRepository;
-    
-    // 임시 저장소 (세션 진행 중 데이터 임시 보관)
-    private final Map<String, Map<String, Object>> tempStorage = new HashMap<>();
 
     /**
      * 1. 불안 위계표 조회 (chatRoomId로) - situation들만 배열로 반환
@@ -78,120 +73,169 @@ public class PreventionService {
     }
 
     /**
-     * 2. 불안정도 입력 (이전/이번)
+     * 2. 불안정도 입력 (이전/이번) - DB에 직접 저장
      */
     public Mono<String> inputAnxietyLevel(AnxietyInputRequestDTO request) {
-        String key = request.getSessionId();
+        String sessionId = request.getSessionId();
         
-        // 임시 저장소에 불안정도 저장
-        tempStorage.computeIfAbsent(key, k -> new HashMap<>())
-                .put(request.getAnxietyType().name().toLowerCase() + "_anxiety_level", request.getAnxietyLevel());
-        
-        log.info("불안정도 저장 완료 - sessionId: {}, type: {}, level: {}", 
-                request.getSessionId(), request.getAnxietyType(), request.getAnxietyLevel());
-        
-        // anxietyType에 따른 응답 메시지
-        String responseMessage;
-        if (request.getAnxietyType() == com.study.mindit.domain.prevention.domain.AnxietyType.START) {
-            responseMessage = "이전 불안 정도가 입력되었습니다";
-        } else {
-            responseMessage = "이후 불안 정도가 입력되었습니다";
-        }
-        
-        return Mono.just(responseMessage);
+        // 기존 리포트가 있는지 확인
+        return preventionReportRepository.findBySessionIdAndIsCompletedFalse(sessionId)
+                .switchIfEmpty(Mono.defer(() -> {
+                    // 기존 리포트가 없으면 새로 생성
+                    PreventionReport newReport = PreventionReport.builder()
+                            .sessionId(sessionId)
+                            .isCompleted(false)
+                            .build();
+                    return preventionReportRepository.save(newReport);
+                }))
+                .flatMap(existingReport -> {
+                    // 불안정도 업데이트
+                    PreventionReport updatedReport;
+                    if (request.getAnxietyType() == com.study.mindit.domain.prevention.domain.AnxietyType.START) {
+                        updatedReport = existingReport.toBuilder()
+                                .anxietyLevelStart(request.getAnxietyLevel())
+                                .build();
+                    } else {
+                        updatedReport = existingReport.toBuilder()
+                                .anxietyLevelEnd(request.getAnxietyLevel())
+                                .build();
+                    }
+                    
+                    return preventionReportRepository.save(updatedReport);
+                })
+                .map(savedReport -> {
+                    log.info("불안정도 저장 완료 - sessionId: {}, type: {}, level: {}", 
+                            request.getSessionId(), request.getAnxietyType(), request.getAnxietyLevel());
+                    
+                    // anxietyType에 따른 응답 메시지
+                    if (request.getAnxietyType() == com.study.mindit.domain.prevention.domain.AnxietyType.START) {
+                        return "이전 불안 정도가 입력되었습니다";
+                    } else {
+                        return "이후 불안 정도가 입력되었습니다";
+                    }
+                });
     }
 
     /**
-     * 3. 강박상황 입력
+     * 3. 강박상황 입력 - DB에 직접 저장
      */
     public Mono<String> inputSituation(SituationInputRequestDTO request) {
-        String key = request.getSessionId();
+        String sessionId = request.getSessionId();
         
-        // 임시 저장소에 강박상황 저장
-        tempStorage.computeIfAbsent(key, k -> new HashMap<>())
-                .put("obsessive_situation", request.getObsessiveSituation());
-        
-        log.info("강박상황 저장 완료 - sessionId: {}, situation: {}", 
-                request.getSessionId(), request.getObsessiveSituation());
-        
-        return Mono.just("강박상황이 저장되었습니다.");
-    }
-
-    /**
-     * 4. 강박사고 입력
-     */
-    public Mono<String> inputThought(ThoughtInputRequestDTO request) {
-        String key = request.getSessionId();
-        
-        // 임시 저장소에 강박사고 저장
-        tempStorage.computeIfAbsent(key, k -> new HashMap<>())
-                .put("obsessive_thought", request.getObsessiveThought());
-        
-        log.info("강박사고 저장 완료 - sessionId: {}, thought: {}", 
-                request.getSessionId(), request.getObsessiveThought());
-        
-        return Mono.just("강박사고가 저장되었습니다.");
-    }
-
-    /**
-     * 5. 반응방지 리포트 생성 (MongoDB에 저장)
-     */
-    public Mono<ReportResponseDTO> generateReport(ReportRequestDTO request) {
-        String key = request.getSessionId();
-        Map<String, Object> data = tempStorage.get(key);
-        
-        if (data == null) {
-            return Mono.error(new RuntimeException("저장된 데이터가 없습니다. 먼저 불안정도, 강박상황, 강박사고를 입력해주세요."));
-        }
-        
-        // 데이터 추출
-        Integer beforeAnxiety = (Integer) data.get("before_anxiety_level");
-        Integer afterAnxiety = (Integer) data.get("after_anxiety_level");
-        String obsessiveSituation = (String) data.get("obsessive_situation");
-        String obsessiveThought = (String) data.get("obsessive_thought");
-        
-        // 이번 주 반응방지 횟수 계산
-        return getThisWeekCount(key)
-                .flatMap(thisWeekCount -> {
-                    // 주차 계산
-                    LocalDate today = LocalDate.now();
-                    WeekFields weekFields = WeekFields.of(Locale.getDefault());
-                    int weekNumber = today.get(weekFields.weekOfYear());
-                    
-                    // PreventionReport 생성 및 저장
-                    PreventionReport report = PreventionReport.builder()
-                            .sessionId(key)
-                            .obsessionSituation(obsessiveSituation)
-                            .obsessionThought(obsessiveThought)
-                            .anxietyLevelStart(beforeAnxiety)
-                            .anxietyLevelEnd(afterAnxiety)
-                            .sessionDurationSeconds(request.getSessionDurationSeconds())
-                            .sessionStartTime(LocalDateTime.now().minusSeconds(request.getSessionDurationSeconds()))
-                            .sessionEndTime(LocalDateTime.now())
-                            .weekNumber(weekNumber)
-                            .sessionNumberInWeek(thisWeekCount)
-                            .isCompleted(true)
+        // 기존 리포트가 있는지 확인
+        return preventionReportRepository.findBySessionIdAndIsCompletedFalse(sessionId)
+                .switchIfEmpty(Mono.defer(() -> {
+                    // 기존 리포트가 없으면 새로 생성
+                    PreventionReport newReport = PreventionReport.builder()
+                            .sessionId(sessionId)
+                            .isCompleted(false)
+                            .build();
+                    return preventionReportRepository.save(newReport);
+                }))
+                .flatMap(existingReport -> {
+                    // 강박상황 업데이트
+                    PreventionReport updatedReport = existingReport.toBuilder()
+                            .obsessionSituation(request.getObsessiveSituation())
                             .build();
                     
-                    return preventionReportRepository.save(report)
-                            .flatMap(savedReport -> getPreviousAnxietyData(key, beforeAnxiety, afterAnxiety)
-                                    .map(previousData -> {
-                                        // 반응방지 시간 포맷팅
-                                        int minutes = request.getSessionDurationSeconds() / 60;
-                                        int seconds = request.getSessionDurationSeconds() % 60;
-                                        String sessionDuration = String.format("%d분 %d초", minutes, seconds);
-                                        
-                                        return ReportResponseDTO.builder()
-                                                .obsessiveSituation(obsessiveSituation)
-                                                .thisWeekCount(thisWeekCount)
-                                                .sessionDuration(sessionDuration)
-                                                .beforeAnxietyLevel(beforeAnxiety)
-                                                .afterAnxietyLevel(afterAnxiety)
-                                                .obsessiveThought(obsessiveThought)
-                                                .previousAnxietyData(previousData)
-                                                .reportTime(LocalDateTime.now())
-                                                .build();
-                                    }));
+                    return preventionReportRepository.save(updatedReport);
+                })
+                .map(savedReport -> {
+                    log.info("강박상황 저장 완료 - sessionId: {}, situation: {}", 
+                            request.getSessionId(), request.getObsessiveSituation());
+                    
+                    return "강박상황이 저장되었습니다.";
+                });
+    }
+
+    /**
+     * 4. 강박사고 입력 - DB에 직접 저장
+     */
+    public Mono<String> inputThought(ThoughtInputRequestDTO request) {
+        String sessionId = request.getSessionId();
+        
+        // 기존 리포트가 있는지 확인
+        return preventionReportRepository.findBySessionIdAndIsCompletedFalse(sessionId)
+                .switchIfEmpty(Mono.defer(() -> {
+                    // 기존 리포트가 없으면 새로 생성
+                    PreventionReport newReport = PreventionReport.builder()
+                            .sessionId(sessionId)
+                            .isCompleted(false)
+                            .build();
+                    return preventionReportRepository.save(newReport);
+                }))
+                .flatMap(existingReport -> {
+                    // 강박사고 업데이트
+                    PreventionReport updatedReport = existingReport.toBuilder()
+                            .obsessionThought(request.getObsessiveThought())
+                            .build();
+                    
+                    return preventionReportRepository.save(updatedReport);
+                })
+                .map(savedReport -> {
+                    log.info("강박사고 저장 완료 - sessionId: {}, thought: {}", 
+                            request.getSessionId(), request.getObsessiveThought());
+                    
+                    return "강박사고가 저장되었습니다.";
+                });
+    }
+
+    /**
+     * 5. 반응방지 리포트 생성 (DB에서 조회 후 완료 처리)
+     */
+    public Mono<ReportResponseDTO> generateReport(ReportRequestDTO request) {
+        String sessionId = request.getSessionId();
+        
+        // 진행 중인 리포트 조회
+        return preventionReportRepository.findBySessionIdAndIsCompletedFalse(sessionId)
+                .switchIfEmpty(Mono.error(new RuntimeException("저장된 데이터가 없습니다. 먼저 불안정도, 강박상황, 강박사고를 입력해주세요.")))
+                .flatMap(existingReport -> {
+                    // 필수 데이터 확인
+                    if (existingReport.getAnxietyLevelStart() == null || 
+                        existingReport.getAnxietyLevelEnd() == null ||
+                        existingReport.getObsessionSituation() == null ||
+                        existingReport.getObsessionThought() == null) {
+                        return Mono.error(new RuntimeException("필수 데이터가 누락되었습니다. 모든 항목을 입력해주세요."));
+                    }
+                    
+                    // 이번 주 반응방지 횟수 계산
+                    return getThisWeekCount(sessionId)
+                            .flatMap(thisWeekCount -> {
+                                // 주차 계산
+                                LocalDate today = LocalDate.now();
+                                WeekFields weekFields = WeekFields.of(Locale.getDefault());
+                                int weekNumber = today.get(weekFields.weekOfYear());
+                                
+                                // 기존 리포트를 완료 상태로 업데이트
+                                PreventionReport completedReport = existingReport.toBuilder()
+                                        .sessionDurationSeconds(request.getSessionDurationSeconds())
+                                        .sessionStartTime(LocalDateTime.now().minusSeconds(request.getSessionDurationSeconds()))
+                                        .sessionEndTime(LocalDateTime.now())
+                                        .weekNumber(weekNumber)
+                                        .sessionNumberInWeek(thisWeekCount)
+                                        .isCompleted(true)
+                                        .build();
+                                
+                                return preventionReportRepository.save(completedReport)
+                                        .flatMap(savedReport -> getPreviousAnxietyData(sessionId, existingReport.getAnxietyLevelStart(), existingReport.getAnxietyLevelEnd())
+                                                .map(previousData -> {
+                                                    // 반응방지 시간 포맷팅
+                                                    int minutes = request.getSessionDurationSeconds() / 60;
+                                                    int seconds = request.getSessionDurationSeconds() % 60;
+                                                    String sessionDuration = String.format("%d분 %d초", minutes, seconds);
+                                                    
+                                                    return ReportResponseDTO.builder()
+                                                            .obsessiveSituation(existingReport.getObsessionSituation())
+                                                            .thisWeekCount(thisWeekCount)
+                                                            .sessionDuration(sessionDuration)
+                                                            .beforeAnxietyLevel(existingReport.getAnxietyLevelStart())
+                                                            .afterAnxietyLevel(existingReport.getAnxietyLevelEnd())
+                                                            .obsessiveThought(existingReport.getObsessionThought())
+                                                            .previousAnxietyData(previousData)
+                                                            .reportTime(LocalDateTime.now())
+                                                            .build();
+                                                }));
+                            });
                 });
     }
 
