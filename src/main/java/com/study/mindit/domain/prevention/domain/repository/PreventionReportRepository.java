@@ -18,5 +18,8 @@ public interface PreventionReportRepository extends ReactiveMongoRepository<Prev
     Mono<Long> countBySessionIdAndWeekNumber(String sessionId, Integer weekNumber);
 
     Mono<PreventionReport> findBySessionIdAndIsCompletedFalse(String sessionId);
+    
+    // 진행 중인 리포트 조회 (null 또는 false)
+    Mono<PreventionReport> findBySessionIdAndIsCompletedIsNullOrIsCompletedFalse(String sessionId);
 }
 
