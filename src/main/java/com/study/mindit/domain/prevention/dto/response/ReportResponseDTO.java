@@ -43,7 +43,11 @@ public class ReportResponseDTO {
     @JsonProperty("previous_anxiety_data")
     private List<PreviousAnxietyDTO> previousAnxietyData;
     
-    // 리포트 생성 시간
+    // 리포트 생성 날짜 (한국어 형식: "10월 31일 금요일")
+    @JsonProperty("report_date")
+    private String reportDate;
+    
+    // 리포트 생성 시간 (한국 시간: "오전 9시 36분")
     @JsonProperty("report_time")
-    private LocalDateTime reportTime;
+    private String reportTime;
 }
