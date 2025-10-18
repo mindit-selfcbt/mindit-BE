@@ -32,12 +32,6 @@ public class PreventionReport extends BaseDocument {
     @Field("session_duration_seconds")
     private Integer sessionDurationSeconds;
 
-    @Field("session_start_time")
-    private LocalDateTime sessionStartTime;
-
-    @Field("session_end_time")
-    private LocalDateTime sessionEndTime;
-
     @Field("week_number")
     private Integer weekNumber;
 

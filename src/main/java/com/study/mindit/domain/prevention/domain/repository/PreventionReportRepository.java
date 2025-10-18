@@ -1,25 +1,18 @@
 package com.study.mindit.domain.prevention.domain.repository;
 
 import com.study.mindit.domain.prevention.domain.PreventionReport;
+import org.springframework.data.mongodb.repository.Query;
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface PreventionReportRepository extends ReactiveMongoRepository<PreventionReport, String> {
     
-    Flux<PreventionReport> findBySessionId(String sessionId);
-    
     Flux<PreventionReport> findBySessionIdOrderByCreatedAtDesc(String sessionId);
-    
-    Mono<PreventionReport> findBySessionIdAndWeekNumberAndSessionNumberInWeek(String sessionId, Integer weekNumber, Integer sessionNumberInWeek);
-    
-    Flux<PreventionReport> findBySessionIdAndWeekNumber(String sessionId, Integer weekNumber);
     
     Mono<Long> countBySessionIdAndWeekNumber(String sessionId, Integer weekNumber);
 
-    Mono<PreventionReport> findBySessionIdAndIsCompletedFalse(String sessionId);
-    
-    // 진행 중인 리포트 조회 (null 또는 false)
-    Mono<PreventionReport> findBySessionIdAndIsCompletedIsNullOrIsCompletedFalse(String sessionId);
+    @Query("{ 'session_id': ?0, 'is_completed': false }")
+    Mono<PreventionReport> findOngoingReportBySessionId(String sessionId);
 }
 

@@ -9,12 +9,19 @@ import com.study.mindit.domain.prevention.dto.response.PreviousAnxietyDTO;
 import com.study.mindit.domain.prevention.dto.response.ReportResponseDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +34,7 @@ public class PreventionService {
 
     private final OBChatRoomRepository chatRoomRepository;
     private final PreventionReportRepository preventionReportRepository;
+    private final ReactiveMongoTemplate mongoTemplate;
 
     /**
      * 1. 불안 위계표 조회 (chatRoomId로) - situation들만 배열로 반환
@@ -78,8 +86,8 @@ public class PreventionService {
     public Mono<String> inputAnxietyLevel(AnxietyInputRequestDTO request) {
         String sessionId = request.getSessionId();
         
-        // 진행 중인 리포트 조회 (null 또는 false 모두 포함)
-        return preventionReportRepository.findBySessionIdAndIsCompletedIsNullOrIsCompletedFalse(sessionId)
+        // 진행 중인 리포트 조회
+        return preventionReportRepository.findOngoingReportBySessionId(sessionId)
                 .switchIfEmpty(Mono.defer(() -> {
                     // 진행 중인 문서가 없으면 새로 생성
                     log.info("진행 중인 리포트가 없어서 새로 생성 - sessionId: {}", sessionId);
@@ -90,19 +98,18 @@ public class PreventionService {
                     return preventionReportRepository.save(newReport);
                 }))
                 .flatMap(existingReport -> {
-                    // 불안정도 업데이트
-                    PreventionReport updatedReport;
+                    // MongoDB Update로 직접 필드 업데이트
+                    Query query = new Query(Criteria.where("_id").is(existingReport.getId()));
+                    Update update = new Update();
+                    
                     if (request.getAnxietyType() == com.study.mindit.domain.prevention.domain.AnxietyType.START) {
-                        updatedReport = existingReport.toBuilder()
-                                .anxietyLevelStart(request.getAnxietyLevel())
-                                .build();
+                        update.set("anxiety_level_start", request.getAnxietyLevel());
                     } else {
-                        updatedReport = existingReport.toBuilder()
-                                .anxietyLevelEnd(request.getAnxietyLevel())
-                                .build();
+                        update.set("anxiety_level_end", request.getAnxietyLevel());
                     }
                     
-                    return preventionReportRepository.save(updatedReport);
+                    return mongoTemplate.updateFirst(query, update, PreventionReport.class)
+                            .thenReturn(existingReport);
                 })
                 .map(savedReport -> {
                     log.info("불안정도 저장 완료 - sessionId: {}, type: {}, level: {}", 
@@ -123,8 +130,8 @@ public class PreventionService {
     public Mono<String> inputSituation(SituationInputRequestDTO request) {
         String sessionId = request.getSessionId();
         
-        // 진행 중인 리포트 조회 (null 또는 false 모두 포함)
-        return preventionReportRepository.findBySessionIdAndIsCompletedIsNullOrIsCompletedFalse(sessionId)
+        // 진행 중인 리포트 조회
+        return preventionReportRepository.findOngoingReportBySessionId(sessionId)
                 .switchIfEmpty(Mono.defer(() -> {
                     // 진행 중인 문서가 없으면 새로 생성
                     log.info("진행 중인 리포트가 없어서 새로 생성 - sessionId: {}", sessionId);
@@ -135,12 +142,12 @@ public class PreventionService {
                     return preventionReportRepository.save(newReport);
                 }))
                 .flatMap(existingReport -> {
-                    // 강박상황 업데이트
-                    PreventionReport updatedReport = existingReport.toBuilder()
-                            .obsessionSituation(request.getObsessiveSituation())
-                            .build();
+                    // MongoDB Update로 직접 필드 업데이트
+                    Query query = new Query(Criteria.where("_id").is(existingReport.getId()));
+                    Update update = new Update().set("obsession_situation", request.getObsessiveSituation());
                     
-                    return preventionReportRepository.save(updatedReport);
+                    return mongoTemplate.updateFirst(query, update, PreventionReport.class)
+                            .thenReturn(existingReport);
                 })
                 .map(savedReport -> {
                     log.info("강박상황 저장 완료 - sessionId: {}, situation: {}", 
@@ -156,8 +163,8 @@ public class PreventionService {
     public Mono<String> inputThought(ThoughtInputRequestDTO request) {
         String sessionId = request.getSessionId();
         
-        // 진행 중인 리포트 조회 (null 또는 false 모두 포함)
-        return preventionReportRepository.findBySessionIdAndIsCompletedIsNullOrIsCompletedFalse(sessionId)
+        // 진행 중인 리포트 조회
+        return preventionReportRepository.findOngoingReportBySessionId(sessionId)
                 .switchIfEmpty(Mono.defer(() -> {
                     // 진행 중인 문서가 없으면 새로 생성
                     log.info("진행 중인 리포트가 없어서 새로 생성 - sessionId: {}", sessionId);
@@ -168,12 +175,12 @@ public class PreventionService {
                     return preventionReportRepository.save(newReport);
                 }))
                 .flatMap(existingReport -> {
-                    // 강박사고 업데이트
-                    PreventionReport updatedReport = existingReport.toBuilder()
-                            .obsessionThought(request.getObsessiveThought())
-                            .build();
+                    // MongoDB Update로 직접 필드 업데이트
+                    Query query = new Query(Criteria.where("_id").is(existingReport.getId()));
+                    Update update = new Update().set("obsession_thought", request.getObsessiveThought());
                     
-                    return preventionReportRepository.save(updatedReport);
+                    return mongoTemplate.updateFirst(query, update, PreventionReport.class)
+                            .thenReturn(existingReport);
                 })
                 .map(savedReport -> {
                     log.info("강박사고 저장 완료 - sessionId: {}, thought: {}", 
@@ -189,8 +196,8 @@ public class PreventionService {
     public Mono<ReportResponseDTO> generateReport(ReportRequestDTO request) {
         String sessionId = request.getSessionId();
         
-        // 진행 중인 리포트 조회 (null 또는 false 모두 포함)
-        return preventionReportRepository.findBySessionIdAndIsCompletedIsNullOrIsCompletedFalse(sessionId)
+        // 진행 중인 리포트 조회
+        return preventionReportRepository.findOngoingReportBySessionId(sessionId)
                 .switchIfEmpty(Mono.error(new RuntimeException("저장된 데이터가 없습니다. 먼저 불안정도, 강박상황, 강박사고를 입력해주세요.")))
                 .flatMap(existingReport -> {
                     // 필수 데이터 확인
@@ -209,25 +216,27 @@ public class PreventionService {
                                 WeekFields weekFields = WeekFields.of(Locale.getDefault());
                                 int weekNumber = today.get(weekFields.weekOfYear());
                                 
-                                // 기존 리포트를 완료 상태로 업데이트
-                                PreventionReport completedReport = existingReport.toBuilder()
-                                        .sessionDurationSeconds(request.getSessionDurationSeconds())
-                                        .sessionStartTime(LocalDateTime.now().minusSeconds(request.getSessionDurationSeconds()))
-                                        .sessionEndTime(LocalDateTime.now())
-                                        .weekNumber(weekNumber)
-                                        .sessionNumberInWeek(thisWeekCount)
-                                        .isCompleted(true)
-                                        .build();
+                                // MongoDB Update로 직접 필드 업데이트
+                                Query query = new Query(Criteria.where("_id").is(existingReport.getId()));
+                                Update update = new Update()
+                                        .set("session_duration_seconds", request.getSessionDurationSeconds())
+                                        .set("session_start_time", LocalDateTime.now().minusSeconds(request.getSessionDurationSeconds()))
+                                        .set("session_end_time", LocalDateTime.now())
+                                        .set("week_number", weekNumber)
+                                        .set("session_number_in_week", thisWeekCount)
+                                        .set("is_completed", true);
                                 
-                                return preventionReportRepository.save(completedReport)
+                                return mongoTemplate.updateFirst(query, update, PreventionReport.class)
+                                        .thenReturn(existingReport)
                                         .flatMap(savedReport -> getPreviousAnxietyData(sessionId, existingReport.getAnxietyLevelStart(), existingReport.getAnxietyLevelEnd())
-                                                .map(previousData -> {
+                                                .flatMap(previousData -> {
                                                     // 반응방지 시간 포맷팅
                                                     int minutes = request.getSessionDurationSeconds() / 60;
                                                     int seconds = request.getSessionDurationSeconds() % 60;
                                                     String sessionDuration = String.format("%d분 %d초", minutes, seconds);
                                                     
-                                                    return ReportResponseDTO.builder()
+                                                    // 최종 리포트 데이터 생성
+                                                    ReportResponseDTO reportResponse = ReportResponseDTO.builder()
                                                             .obsessiveSituation(existingReport.getObsessionSituation())
                                                             .thisWeekCount(thisWeekCount)
                                                             .sessionDuration(sessionDuration)
@@ -235,8 +244,18 @@ public class PreventionService {
                                                             .afterAnxietyLevel(existingReport.getAnxietyLevelEnd())
                                                             .obsessiveThought(existingReport.getObsessionThought())
                                                             .previousAnxietyData(previousData)
-                                                            .reportTime(LocalDateTime.now())
+                                                            .reportDate(formatKoreanDate(LocalDateTime.now()))
+                                                            .reportTime(formatKoreanTime(LocalDateTime.now()))
                                                             .build();
+                                                    
+                                                    // 최종 리포트 데이터를 prevention_reports에 저장
+                                                    PreventionReport finalReport = existingReport.toBuilder()
+                                                            .sessionDurationSeconds(request.getSessionDurationSeconds())
+                                                            .isCompleted(true)
+                                                            .build();
+                                                    
+                                                    return preventionReportRepository.save(finalReport)
+                                                            .thenReturn(reportResponse);
                                                 }));
                             });
                 });
@@ -265,13 +284,17 @@ public class PreventionService {
                         report.getAnxietyLevelEnd() != null)
                 .take(2) // 이전 세션 최대 2개만
                 .map(report -> {
-                    String formattedDate = formatDate(report.getCreatedAt());
+                    // createdAt이 null이면 현재 시간 사용
+                    LocalDateTime reportDate = report.getCreatedAt() != null ? 
+                            report.getCreatedAt() : LocalDateTime.now();
+                    String formattedDate = formatDate(reportDate);
                     return PreviousAnxietyDTO.builder()
                             .beforeAnxietyLevel(report.getAnxietyLevelStart())
                             .afterAnxietyLevel(report.getAnxietyLevelEnd())
                             .sessionDate(formattedDate)
                             .build();
                 })
+                .filter(dto -> dto.getBeforeAnxietyLevel() != null && dto.getAfterAnxietyLevel() != null)
                 .collectList()
                 .map(previousData -> {
                     List<PreviousAnxietyDTO> anxietyDataList = new ArrayList<>();
@@ -295,8 +318,49 @@ public class PreventionService {
      * 날짜를 "몇월 몇일" 형태로 포맷팅
      */
     private String formatDate(LocalDateTime dateTime) {
+        if (dateTime == null) {
+            return "알 수 없음";
+        }
         int month = dateTime.getMonthValue();
         int day = dateTime.getDayOfMonth();
         return String.format("%d월 %d일", month, day);
+    }
+
+    /**
+     * 날짜를 "10월 31일 금요일" 형태로 포맷팅
+     */
+    private String formatKoreanDate(LocalDateTime dateTime) {
+        if (dateTime == null) {
+            return "알 수 없음";
+        }
+        
+        int month = dateTime.getMonthValue();
+        int day = dateTime.getDayOfMonth();
+        String dayOfWeek = dateTime.getDayOfWeek().getDisplayName(
+            java.time.format.TextStyle.FULL, 
+            Locale.KOREAN
+        );
+        
+        return String.format("%d월 %d일 %s", month, day, dayOfWeek);
+    }
+
+    /**
+     * 시간을 한국 시간 "오전 9시 36분" 형태로 포맷팅
+     */
+    private String formatKoreanTime(LocalDateTime dateTime) {
+        if (dateTime == null) {
+            return "알 수 없음";
+        }
+        
+        // 한국 시간으로 변환
+        ZonedDateTime koreanTime = dateTime.atZone(ZoneId.of("Asia/Seoul"));
+        
+        int hour = koreanTime.getHour();
+        int minute = koreanTime.getMinute();
+        
+        String amPm = hour < 12 ? "오전" : "오후";
+        int displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+        
+        return String.format("%s %d시 %d분", amPm, displayHour, minute);
     }
 }
