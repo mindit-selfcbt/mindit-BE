@@ -32,7 +32,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class OBChatResponseDTO {
+public class ObsessionChatResponseDTO {
     private String question;
 
     private List<String> choices;
@@ -61,7 +61,7 @@ public class OBChatResponseDTO {
     private List<String> situations;
 
     @JsonProperty("anxiety_hierarchy")
-    private List<OBAnxietyHierarchyDTO> anxietyHierarchy;
+    private List<ObsessionAnxietyHierarchyDTO> anxietyHierarchy;
 
     @JsonProperty("practice_message")
     private String practiceMessage;

@@ -21,7 +21,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OBChatResponseDTO_9 {
+public class ObsessionChatResponseDTO_9 {
 
     @JsonIgnore
     private String sessionId;
@@ -30,7 +30,7 @@ public class OBChatResponseDTO_9 {
     private String introMessage;
 
     @JsonProperty("anxiety_hierarchy")
-    private List<OBAnxietyHierarchyDTO> anxietyHierarchy;
+    private List<ObsessionAnxietyHierarchyDTO> anxietyHierarchy;
 
     @JsonProperty("practice_message")
     private String practiceMessage;
