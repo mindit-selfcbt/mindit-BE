@@ -18,4 +18,7 @@ public class CognitionChatRequestDTO_1 {
     @NotNull(message = "세션 ID는 필수입니다")
     private String sessionId;
 
+    @JsonProperty("user_text")
+    private String userText;
+
 }

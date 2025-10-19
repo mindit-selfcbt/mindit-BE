@@ -180,14 +180,10 @@ public class CognitionChatService {
 
     // Step 2: conversation_history 조회 (process_chat_2 연결)
     private Mono<CognitionChatResponseDTO> processStep2UserResponse(CognitionChatRequestDTO_1 request, CognitionChatRoom cognitionChatRoom) {
-        // TODO: 사용자 응답을 conversation_history에 추가하는 로직
-        // 현재는 request에서 content를 받을 수 없으므로 WebSocket에서 전달되는 실제 사용자 입력이 필요
-        
-        // 임시로 더미 데이터 사용 (실제로는 WebSocket에서 받은 사용자 입력 사용)
-        String userStep2Response = "엄청나게 불안하고, 짜증도 나고 원래 하던 것처럼 지도를 확인하고 싶은데 참으려니까 너무 힘들었어요";
-        
-        // 사용자 응답을 conversation_history에 추가
-        cognitionChatRoom.addConversation("user", userStep2Response);
+        // 사용자 입력이 있는 경우에만 conversation_history에 추가
+        if (request.getUserText() != null && !request.getUserText().trim().isEmpty()) {
+            cognitionChatRoom.addConversation("user", request.getUserText());
+        }
         
         // obsession_type 확인 (첫 번째 AI 응답에서 가져옴)
         String obsessionType = extractObsessionTypeFromHistory(cognitionChatRoom);
@@ -228,14 +224,10 @@ public class CognitionChatService {
 
     // Step 3: obsession_type에 따른 분기 처리
     private Mono<CognitionChatResponseDTO> processStep3UserResponse(CognitionChatRequestDTO_1 request, CognitionChatRoom cognitionChatRoom) {
-        // TODO: 사용자 응답을 conversation_history에 추가하는 로직
-        // 현재는 request에서 content를 받을 수 없으므로 WebSocket에서 전달되는 실제 사용자 입력이 필요
-        
-        // 임시로 더미 데이터 사용 (실제로는 WebSocket에서 받은 사용자 입력 사용)
-        String userStep3Response = "이제 이 '그릇된 믿음'을 현실적으로 다시 생각해 볼까요?";
-        
-        // 사용자 응답을 conversation_history에 추가
-        cognitionChatRoom.addConversation("user", userStep3Response);
+        // 사용자 입력이 있는 경우에만 conversation_history에 추가
+        if (request.getUserText() != null && !request.getUserText().trim().isEmpty()) {
+            cognitionChatRoom.addConversation("user", request.getUserText());
+        }
         
         // obsession_type 확인 (첫 번째 AI 응답에서 가져옴)
         String obsessionType = extractObsessionTypeFromHistory(cognitionChatRoom);
@@ -292,8 +284,10 @@ public class CognitionChatService {
 
     // Step 4: obsession_type에 따른 분기 처리
     private Mono<CognitionChatResponseDTO> processStep4UserResponse(CognitionChatRequestDTO_1 request, CognitionChatRoom cognitionChatRoom) {
-        // TODO: 사용자 응답을 conversation_history에 추가하는 로직
-        // 현재는 request에서 content를 받을 수 없으므로 WebSocket에서 전달되는 실제 사용자 입력이 필요
+        // 사용자 입력이 있는 경우에만 conversation_history에 추가
+        if (request.getUserText() != null && !request.getUserText().trim().isEmpty()) {
+            cognitionChatRoom.addConversation("user", request.getUserText());
+        }
         
         // obsession_type 확인 (첫 번째 AI 응답에서 가져옴)
         String obsessionType = extractObsessionTypeFromHistory(cognitionChatRoom);
@@ -301,13 +295,9 @@ public class CognitionChatService {
         // obsession_type에 따라 다른 처리
         if ("확인강박".equals(obsessionType)) {
             // 확인강박: 사용자 선택에 따라 process_chat_6 또는 process_chat_7
-            String userStep4Response = "하나만 더 여쭤볼 수 있을까요? 사람들은 그러면 모르는 상태에서도 그렇게까지 불안하지 않은 편인 건가요?";
-            cognitionChatRoom.addConversation("user", userStep4Response);
             return processCheckObsessionStep4(request, cognitionChatRoom);
         } else if ("오염강박".equals(obsessionType)) {
             // 오염강박: process_chat_5 호출
-            String userStep4Response = "잠깐의 접촉 만으로도 세균이 옮 수 있을 것이라고 생각했어요. 하지만 현실에서 병에 걸린 적은 없었어요. 가능성이 없다는 것을 알지만,그 생각 만으로 많이 지치고 힘들어요.";
-            cognitionChatRoom.addConversation("user", userStep4Response);
             return processContaminationObsessionStep4(request, cognitionChatRoom);
         } else {
             return Mono.error(new RuntimeException("지원하지 않는 강박유형입니다: " + obsessionType));
@@ -316,22 +306,21 @@ public class CognitionChatService {
 
     // Step 5: 사용자 선택 처리
     private Mono<CognitionChatResponseDTO> processStep5UserResponse(CognitionChatRequestDTO_1 request, CognitionChatRoom cognitionChatRoom) {
-        // TODO: 사용자 응답을 conversation_history에 추가하는 로직
-        // 현재는 request에서 content를 받을 수 없으므로 WebSocket에서 전달되는 실제 사용자 입력이 필요
         
         // obsession_type 확인 (첫 번째 AI 응답에서 가져옴)
         String obsessionType = extractObsessionTypeFromHistory(cognitionChatRoom);
         
+        // 사용자 입력이 있는 경우에만 conversation_history에 추가
+        if (request.getUserText() != null && !request.getUserText().trim().isEmpty()) {
+            cognitionChatRoom.addConversation("user", request.getUserText());
+        }
+        
         // obsession_type에 따라 다른 처리
         if ("확인강박".equals(obsessionType)) {
             // 확인강박: 사용자 선택에 따라 process_chat_6 또는 process_chat_7
-            String userStep5Response = "하나만 더 여쭤볼 수 있을까요? 사람들은 그러면 모르는 상태에서도 그렇게까지 불안하지 않은 편인 건가요?";
-            cognitionChatRoom.addConversation("user", userStep5Response);
             return processCheckObsessionStep5(request, cognitionChatRoom);
         } else if ("오염강박".equals(obsessionType)) {
             // 오염강박: 사용자 선택에 따라 process_chat_6 또는 process_chat_7
-            String userStep5Response = "하나만 더 여쭤볼 수 있을까요? 사람들은 그러면 모르는 상태에서도 그렇게까지 불안하지 않은 편인 건가요?";
-            cognitionChatRoom.addConversation("user", userStep5Response);
             return processContaminationObsessionStep5(request, cognitionChatRoom);
         } else {
             return Mono.error(new RuntimeException("지원하지 않는 강박유형입니다: " + obsessionType));
@@ -340,14 +329,6 @@ public class CognitionChatService {
 
     // 확인강박 Step 4: 추가 대화 (process_chat_6 연결)
     private Mono<CognitionChatResponseDTO> processCheckObsessionStep4(CognitionChatRequestDTO_1 request, CognitionChatRoom cognitionChatRoom) {
-        // TODO: 사용자 응답을 conversation_history에 추가하는 로직
-        // 현재는 request에서 content를 받을 수 없으므로 WebSocket에서 전달되는 실제 사용자 입력이 필요
-        
-        // 임시로 더미 데이터 사용 (실제로는 WebSocket에서 받은 사용자 입력 사용)
-        String userStep4Response = "하나만 더 여쭤볼 수 있을까요? 사람들은 그러면 모르는 상태에서도 그렇게까지 불안하지 않은 편인 건가요?";
-        
-        // 사용자 응답을 conversation_history에 추가
-        cognitionChatRoom.addConversation("user", userStep4Response);
         
         // obsession_type 확인 (첫 번째 AI 응답에서 가져옴)
         String obsessionType = extractObsessionTypeFromHistory(cognitionChatRoom);
@@ -373,14 +354,6 @@ public class CognitionChatService {
 
     // 오염강박 Step 4: 인지적 재구성 (process5 연결)
     private Mono<CognitionChatResponseDTO> processContaminationObsessionStep4(CognitionChatRequestDTO_1 request, CognitionChatRoom cognitionChatRoom) {
-        // TODO: 사용자 응답을 conversation_history에 추가하는 로직
-        // 현재는 request에서 content를 받을 수 없으므로 WebSocket에서 전달되는 실제 사용자 입력이 필요
-        
-        // 임시로 더미 데이터 사용 (실제로는 WebSocket에서 받은 사용자 입력 사용)
-        String userStep4Response = "잠깐의 접촉 만으로도 세균이 옮 수 있을 것이라고 생각했어요. 하지만 현실에서 병에 걸린 적은 없었어요. 가능성이 없다는 것을 알지만,그 생각 만으로 많이 지치고 힘들어요.";
-        
-        // 사용자 응답을 conversation_history에 추가
-        cognitionChatRoom.addConversation("user", userStep4Response);
         
         // obsession_type 확인 (첫 번째 AI 응답에서 가져옴)
         String obsessionType = extractObsessionTypeFromHistory(cognitionChatRoom);
