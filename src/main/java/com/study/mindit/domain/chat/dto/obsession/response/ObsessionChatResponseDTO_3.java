@@ -11,17 +11,27 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 @JsonPropertyOrder({
+    "gratitude_message",
+    "user_pattern_summary",
     "question",
-    "choices"
+    "thought_examples"
 })
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OBChatResponseDTO_1 {
+public class ObsessionChatResponseDTO_3 {
+
+    @JsonProperty("gratitude_message")
+    private String gratitudeMessage;
+
+    @JsonProperty("user_pattern_summary")
+    private String userPatternSummary;
+
     private String question;
 
-    private List<String> choices;
+    @JsonProperty("thought_examples")
+    private List<String> thoughtExamples;
 
     @JsonIgnore
     private String sessionId;

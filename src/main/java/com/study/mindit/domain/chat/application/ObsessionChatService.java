@@ -1,11 +1,11 @@
 package com.study.mindit.domain.chat.application;
 
-import com.study.mindit.domain.chat.domain.OBChatRoom;
-import com.study.mindit.domain.chat.domain.OBConversation;
+import com.study.mindit.domain.chat.domain.ObsessionChatRoom;
+import com.study.mindit.domain.chat.domain.ObsessionConversation;
 import com.study.mindit.domain.chat.domain.RoomType;
-import com.study.mindit.domain.chat.domain.repository.OBChatRoomRepository;
-import com.study.mindit.domain.chat.dto.obsession.request.OBChatRequestDTO_1;
-import com.study.mindit.domain.chat.dto.obsession.request.OBConversationDTO;
+import com.study.mindit.domain.chat.domain.repository.ObsessionChatRoomRepository;
+import com.study.mindit.domain.chat.dto.obsession.request.ObsessionChatRequestDTO_1;
+import com.study.mindit.domain.chat.dto.obsession.request.ObsessionConversationDTO;
 import com.study.mindit.domain.chat.dto.obsession.response.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,12 +19,12 @@ import java.util.ArrayList;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-public class OBChatService {
-    private final OBChatRoomRepository OBChatRoomRepository;
-    private final OBAiService aiService;
+public class ObsessionChatService {
+    private final ObsessionChatRoomRepository OBChatRoomRepository;
+    private final ObsessionAiService aiService;
 
     // 1. 전체 로직의 시작점이자 흐름을 조정하는 역할
-    public Flux<OBChatResponseDTO> processChatMessage(OBChatRequestDTO_1 chatRequestDto) {
+    public Flux<ObsessionChatResponseDTO> processChatMessage(ObsessionChatRequestDTO_1 chatRequestDto) {
         log.info("=== ChatService.processChatMessage 시작 ===");
         log.info("입력: {}", chatRequestDto);
         
@@ -44,7 +44,7 @@ public class OBChatService {
     }
 
     // 2-1. Step 4와 5를 연속으로 호출 (Flux로 두 응답을 순차적으로 반환)
-    private Flux<OBChatResponseDTO> callAnalyze4And5Together(OBChatRoom chatRoom, String sessionId) {
+    private Flux<ObsessionChatResponseDTO> callAnalyze4And5Together(ObsessionChatRoom chatRoom, String sessionId) {
         return aiService.callAnalyze4(sessionId, convertToRequestConversationItems(chatRoom))
                 .flatMap(res4 -> {
                     // Step 4 응답을 conversation_history에 추가
@@ -77,7 +77,7 @@ public class OBChatService {
     }
     
     // 2-2. Step 6과 7을 연속으로 호출 (Flux로 두 응답을 순차적으로 반환)
-    private Flux<OBChatResponseDTO> callAnalyze6And7Together(OBChatRoom chatRoom, String sessionId) {
+    private Flux<ObsessionChatResponseDTO> callAnalyze6And7Together(ObsessionChatRoom chatRoom, String sessionId) {
         return aiService.callAnalyze6(sessionId, convertToRequestConversationItems(chatRoom))
                 .flatMap(res6 -> {
                     // Step 6 응답을 conversation_history에 추가
@@ -110,7 +110,7 @@ public class OBChatService {
     }
 
     // 2. FastAPI 호출 및 ChatRoom 업데이트
-    private Flux<OBChatResponseDTO> callFastApiAndUpdateRoom(OBChatRoom chatRoom, int step) {
+    private Flux<ObsessionChatResponseDTO> callFastApiAndUpdateRoom(ObsessionChatRoom chatRoom, int step) {
         String sessionId = chatRoom.getId();
         
         // Step 4는 특별 처리 (Step 4와 5를 연속으로 호출)
@@ -158,7 +158,7 @@ public class OBChatService {
     }
 
     // 3. AI 응답으로 ChatRoom 업데이트
-    private Mono<OBChatResponseDTO> updateRoomWithAiResponse(OBChatRoom chatRoom, Object aiResponseDto, int step) {
+    private Mono<ObsessionChatResponseDTO> updateRoomWithAiResponse(ObsessionChatRoom chatRoom, Object aiResponseDto, int step) {
         // Step 8: 상황 선택을 임시 저장
         if (step == 8) {
             extractAndSaveSelectedSituations(chatRoom);
@@ -170,52 +170,52 @@ public class OBChatService {
             log.info("=== Step 9: mapScoresToSituations 완료 ===");
         }
         
-        if (aiResponseDto instanceof OBChatResponseDTO_1) {
-            OBChatResponseDTO_1 res1 = (OBChatResponseDTO_1) aiResponseDto;
+        if (aiResponseDto instanceof ObsessionChatResponseDTO_1) {
+            ObsessionChatResponseDTO_1 res1 = (ObsessionChatResponseDTO_1) aiResponseDto;
             chatRoom.addConversation("assistant", aiResponseDto);
             
             return OBChatRoomRepository.save(chatRoom)
                     .map(savedRoom -> buildChatResponseStep1(savedRoom, res1.getQuestion(), res1.getChoices()));
                     
-        } else if (aiResponseDto instanceof OBChatResponseDTO_2) {
-            OBChatResponseDTO_2 res2 = (OBChatResponseDTO_2) aiResponseDto;
+        } else if (aiResponseDto instanceof ObsessionChatResponseDTO_2) {
+            ObsessionChatResponseDTO_2 res2 = (ObsessionChatResponseDTO_2) aiResponseDto;
             chatRoom.addConversation("assistant", aiResponseDto);
             
             return OBChatRoomRepository.save(chatRoom)
                     .map(savedRoom -> buildChatResponseStep2(savedRoom, res2.getResponse()));
                     
-        } else if (aiResponseDto instanceof OBChatResponseDTO_3) {
-            OBChatResponseDTO_3 res3 = (OBChatResponseDTO_3) aiResponseDto;
+        } else if (aiResponseDto instanceof ObsessionChatResponseDTO_3) {
+            ObsessionChatResponseDTO_3 res3 = (ObsessionChatResponseDTO_3) aiResponseDto;
             chatRoom.addConversation("assistant", aiResponseDto);
             
             return OBChatRoomRepository.save(chatRoom)
                     .map(savedRoom -> buildChatResponseStep3(savedRoom, res3.getQuestion(), 
                             res3.getUserPatternSummary(), res3.getThoughtExamples(), res3.getGratitudeMessage()));
                             
-        } else if (aiResponseDto instanceof OBChatResponseDTO_4) {
-            OBChatResponseDTO_4 res4 = (OBChatResponseDTO_4) aiResponseDto;
+        } else if (aiResponseDto instanceof ObsessionChatResponseDTO_4) {
+            ObsessionChatResponseDTO_4 res4 = (ObsessionChatResponseDTO_4) aiResponseDto;
             chatRoom.addConversation("assistant", aiResponseDto);
             
             return OBChatRoomRepository.save(chatRoom)
                     .map(savedRoom -> buildChatResponseStep4(savedRoom, res4.getUserPatternSummary(), 
                             res4.getCategoryMessage(), res4.getEncouragement()));
                             
-        } else if (aiResponseDto instanceof OBChatResponseDTO_7) {
-            OBChatResponseDTO_7 res7 = (OBChatResponseDTO_7) aiResponseDto;
+        } else if (aiResponseDto instanceof ObsessionChatResponseDTO_7) {
+            ObsessionChatResponseDTO_7 res7 = (ObsessionChatResponseDTO_7) aiResponseDto;
             chatRoom.addConversation("assistant", aiResponseDto);
             
             return OBChatRoomRepository.save(chatRoom)
                     .map(savedRoom -> buildChatResponseStep7(savedRoom, res7.getIntroMessage(), 
                             res7.getQuestion(), res7.getSituations()));
                             
-        } else if (aiResponseDto instanceof OBChatResponseDTO_9) {
-            OBChatResponseDTO_9 res9 = (OBChatResponseDTO_9) aiResponseDto;
+        } else if (aiResponseDto instanceof ObsessionChatResponseDTO_9) {
+            ObsessionChatResponseDTO_9 res9 = (ObsessionChatResponseDTO_9) aiResponseDto;
             chatRoom.addConversation("assistant", aiResponseDto);
             
             // Step 9는 항상 chatRoom에서 anxiety_hierarchy를 생성
             return OBChatRoomRepository.save(chatRoom)
                     .map(savedRoom -> {
-                        List<OBAnxietyHierarchyDTO> anxietyHierarchy = createAnxietyHierarchyFromChatRoom(savedRoom);
+                        List<ObsessionAnxietyHierarchyDTO> anxietyHierarchy = createAnxietyHierarchyFromChatRoom(savedRoom);
                         log.info("=== Step 9: anxiety_hierarchy 생성 완료. 크기: {} ===", anxietyHierarchy.size());
                         return buildChatResponseStep9(savedRoom, res9.getIntroMessage(), 
                                 anxietyHierarchy, res9.getPracticeMessage(), 
@@ -227,8 +227,8 @@ public class OBChatService {
     }
 
     // 4. ChatResponseDTO 생성 - Step 1
-    private OBChatResponseDTO buildChatResponseStep1(OBChatRoom chatRoom, String question, List<String> choices) {
-        return OBChatResponseDTO.builder()
+    private ObsessionChatResponseDTO buildChatResponseStep1(ObsessionChatRoom chatRoom, String question, List<String> choices) {
+        return ObsessionChatResponseDTO.builder()
                 .question(question)
                 .choices(choices)
                 .sessionId(chatRoom.getId())
@@ -236,17 +236,17 @@ public class OBChatService {
     }
     
     // 4-2. ChatResponseDTO 생성 - Step 2
-    private OBChatResponseDTO buildChatResponseStep2(OBChatRoom chatRoom, String aiContent) {
-        return OBChatResponseDTO.builder()
+    private ObsessionChatResponseDTO buildChatResponseStep2(ObsessionChatRoom chatRoom, String aiContent) {
+        return ObsessionChatResponseDTO.builder()
                 .response(aiContent)
                 .sessionId(chatRoom.getId())
                 .build();
     }
     
     // 4-3. ChatResponseDTO 생성 - Step 3
-    private OBChatResponseDTO buildChatResponseStep3(OBChatRoom chatRoom, String question,
-                                                     String userPatternSummary, List<String> thoughtExamples, String aiContent) {
-        return OBChatResponseDTO.builder()
+    private ObsessionChatResponseDTO buildChatResponseStep3(ObsessionChatRoom chatRoom, String question,
+                                                            String userPatternSummary, List<String> thoughtExamples, String aiContent) {
+        return ObsessionChatResponseDTO.builder()
                 .gratitudeMessage(aiContent)
                 .userPatternSummary(userPatternSummary)
                 .question(question)
@@ -256,9 +256,9 @@ public class OBChatService {
     }
     
     // 4-4. ChatResponseDTO 생성 - Step 4
-    private OBChatResponseDTO buildChatResponseStep4(OBChatRoom chatRoom, String userPatternSummary,
-                                                     String categoryMessage, String encouragement) {
-        return OBChatResponseDTO.builder()
+    private ObsessionChatResponseDTO buildChatResponseStep4(ObsessionChatRoom chatRoom, String userPatternSummary,
+                                                            String categoryMessage, String encouragement) {
+        return ObsessionChatResponseDTO.builder()
                 .userPatternSummary(userPatternSummary)
                 .categoryMessage(categoryMessage)
                 .encouragement(encouragement)
@@ -267,9 +267,9 @@ public class OBChatService {
     }
     
     // 4-5. ChatResponseDTO 생성 - Step 7
-    private OBChatResponseDTO buildChatResponseStep7(OBChatRoom chatRoom, String introMessage,
-                                                     String question, List<String> situations) {
-        return OBChatResponseDTO.builder()
+    private ObsessionChatResponseDTO buildChatResponseStep7(ObsessionChatRoom chatRoom, String introMessage,
+                                                            String question, List<String> situations) {
+        return ObsessionChatResponseDTO.builder()
                 .introMessage(introMessage)
                 .question(question)
                 .situations(situations)
@@ -278,11 +278,11 @@ public class OBChatService {
     }
     
     // 4-6. ChatResponseDTO 생성 - Step 9
-    private OBChatResponseDTO buildChatResponseStep9(OBChatRoom chatRoom, String introMessage,
-                                                     List<OBAnxietyHierarchyDTO> anxietyHierarchy,
-                                                     String practiceMessage, String exampleMessage, String supportMessage) {
+    private ObsessionChatResponseDTO buildChatResponseStep9(ObsessionChatRoom chatRoom, String introMessage,
+                                                            List<ObsessionAnxietyHierarchyDTO> anxietyHierarchy,
+                                                            String practiceMessage, String exampleMessage, String supportMessage) {
         
-        return OBChatResponseDTO.builder()
+        return ObsessionChatResponseDTO.builder()
                 .introMessage(introMessage)
                 .anxietyHierarchy(anxietyHierarchy)
                 .practiceMessage(practiceMessage)
@@ -293,8 +293,8 @@ public class OBChatService {
     }
     
     // ChatRoom에서 anxiety_hierarchy 생성
-    private List<OBAnxietyHierarchyDTO> createAnxietyHierarchyFromChatRoom(OBChatRoom chatRoom) {
-        List<OBAnxietyHierarchyDTO> anxietyHierarchy = new ArrayList<>();
+    private List<ObsessionAnxietyHierarchyDTO> createAnxietyHierarchyFromChatRoom(ObsessionChatRoom chatRoom) {
+        List<ObsessionAnxietyHierarchyDTO> anxietyHierarchy = new ArrayList<>();
         
         log.info("=== createAnxietyHierarchyFromChatRoom 시작 ===");
         
@@ -303,7 +303,7 @@ public class OBChatService {
             log.info("conversation_history 크기: {}", chatRoom.getConversationHistory().size());
             
             for (int idx = 0; idx < chatRoom.getConversationHistory().size(); idx++) {
-                OBConversation conversation = chatRoom.getConversationHistory().get(idx);
+                ObsessionConversation conversation = chatRoom.getConversationHistory().get(idx);
                 Object content = conversation.getContent();
                 
                 log.info("conversation[{}] - role: {}, content type: {}", idx, conversation.getRole(), 
@@ -341,7 +341,7 @@ public class OBChatService {
                                     
                                     log.info("상황[{}] - situation: {}, score: {}", i + 1, situationText, score);
                                     
-                                    anxietyHierarchy.add(OBAnxietyHierarchyDTO.builder()
+                                    anxietyHierarchy.add(ObsessionAnxietyHierarchyDTO.builder()
                                             .order(i + 1)
                                             .situation(situationText)
                                             .score(score)
@@ -368,12 +368,12 @@ public class OBChatService {
 
     // Step 8: conversation_history에서 선택된 상황 추출하여 저장
     // 프론트엔드 형식: {selected_situations: ["상황1", "상황2", ...]}
-    private void extractAndSaveSelectedSituations(OBChatRoom chatRoom) {
+    private void extractAndSaveSelectedSituations(ObsessionChatRoom chatRoom) {
         if (chatRoom.getConversationHistory() == null || chatRoom.getConversationHistory().isEmpty()) {
             return;
         }
         
-        OBConversation lastUserMessage =
+        ObsessionConversation lastUserMessage =
             chatRoom.getConversationHistory().get(chatRoom.getConversationHistory().size() - 1);
         
         Object content = lastUserMessage.getContent();
@@ -396,12 +396,12 @@ public class OBChatService {
     
     // Step 9: 점수 배열을 받아서 상황과 매핑
     // 프론트엔드 형식: [95, 80, 90, 70]
-    private void mapScoresToSituations(OBChatRoom chatRoom) {
+    private void mapScoresToSituations(ObsessionChatRoom chatRoom) {
         if (chatRoom.getTempSelectedSituations() == null || chatRoom.getTempSelectedSituations().isEmpty()) {
             throw new IllegalStateException("Step 8에서 저장된 상황이 없습니다.");
         }
 
-        OBConversation lastUserMessage =
+        ObsessionConversation lastUserMessage =
             chatRoom.getConversationHistory().get(chatRoom.getConversationHistory().size() - 1);
         
         Object content = lastUserMessage.getContent();
@@ -437,10 +437,10 @@ public class OBChatService {
     }
     
     // ChatRoom의 conversation_history를 Request DTO용 ConversationItem으로 변환
-    private List<OBConversationDTO> convertToRequestConversationItems(OBChatRoom chatRoom) {
-        List<OBConversationDTO> items = new ArrayList<>();
-        for (OBConversation item : chatRoom.getConversationHistory()) {
-            items.add(new OBConversationDTO(
+    private List<ObsessionConversationDTO> convertToRequestConversationItems(ObsessionChatRoom chatRoom) {
+        List<ObsessionConversationDTO> items = new ArrayList<>();
+        for (ObsessionConversation item : chatRoom.getConversationHistory()) {
+            items.add(new ObsessionConversationDTO(
                     item.getRole(), 
                     item.getContent()
             ));
@@ -449,38 +449,38 @@ public class OBChatService {
     }
 
     // 채팅방을 생성
-    public Mono<OBChatRoomResponseDTO> createChatRoom(RoomType roomType) {
-        OBChatRoom chatRoom = OBChatRoom.builder()
+    public Mono<ObsessionChatRoomResponseDTO> createChatRoom(RoomType roomType) {
+        ObsessionChatRoom chatRoom = ObsessionChatRoom.builder()
                 .roomType(roomType)
                 .build();
         return OBChatRoomRepository.save(chatRoom)
-                .map(savedRoom -> OBChatRoomResponseDTO.from(savedRoom));
+                .map(savedRoom -> ObsessionChatRoomResponseDTO.from(savedRoom));
     }
 
     // 모든 채팅방 목록 조회
-    public Flux<OBChatRoomResponseDTO> getChatRooms() {
+    public Flux<ObsessionChatRoomResponseDTO> getChatRooms() {
         return OBChatRoomRepository.findAll()
-                .map(chatRoom -> OBChatRoomResponseDTO.from(chatRoom));
+                .map(chatRoom -> ObsessionChatRoomResponseDTO.from(chatRoom));
     }
 
     // 특정 채팅방 메시지 목록 조회 - conversation_history 반환
-    public Mono<OBChatRoom> getChatMessages(String sessionId) {
+    public Mono<ObsessionChatRoom> getChatMessages(String sessionId) {
         return OBChatRoomRepository.findById(sessionId);
     }
     
     // 채팅방 Step 설정 (테스트용)
-    public Mono<OBChatRoom> setStep(String sessionId, int step) {
+    public Mono<ObsessionChatRoom> setStep(String sessionId, int step) {
         return OBChatRoomRepository.findById(sessionId)
                 .flatMap(chatRoom -> {
                     chatRoom.setCurrentStep(step);
                     
                     // conversation_history를 해당 step까지만 유지
-                    List<OBConversation> conversationHistory = chatRoom.getConversationHistory();
+                    List<ObsessionConversation> conversationHistory = chatRoom.getConversationHistory();
                     if (conversationHistory != null && !conversationHistory.isEmpty()) {
                         // step * 2까지만 유지 (사용자 메시지 + AI 응답 = 2개씩)
                         int maxItems = step * 2;
                         if (conversationHistory.size() > maxItems) {
-                            List<OBConversation> trimmedHistory = new ArrayList<>(
+                            List<ObsessionConversation> trimmedHistory = new ArrayList<>(
                                 conversationHistory.subList(0, maxItems)
                             );
                             chatRoom.setConversationHistory(trimmedHistory);

@@ -10,7 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Field;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OBConversation {
+public class ObsessionConversation {
 
     @Field("role")
     private String role;

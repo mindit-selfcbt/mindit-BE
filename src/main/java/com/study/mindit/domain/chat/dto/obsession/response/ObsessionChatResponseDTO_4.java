@@ -9,16 +9,27 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @JsonPropertyOrder({
-    "response"
+    "user_pattern_summary",
+    "category_message",
+    "encouragement"
 })
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OBChatResponseDTO_2 {
-
-    private String response;
+public class ObsessionChatResponseDTO_4 {
 
     @JsonIgnore
     private String sessionId;
+
+    @JsonProperty("user_pattern_summary")
+    private String userPatternSummary;
+
+    @JsonProperty("category_message")
+    private String categoryMessage;
+
+    @JsonProperty("encouragement")
+    private String encouragement;
 }
+
+

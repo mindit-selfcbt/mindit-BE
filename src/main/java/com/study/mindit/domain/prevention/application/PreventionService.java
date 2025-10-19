@@ -1,10 +1,10 @@
 package com.study.mindit.domain.prevention.application;
 
-import com.study.mindit.domain.chat.domain.repository.OBChatRoomRepository;
+import com.study.mindit.domain.chat.domain.ObsessionConversation;
+import com.study.mindit.domain.chat.domain.repository.ObsessionChatRoomRepository;
 import com.study.mindit.domain.prevention.domain.PreventionReport;
 import com.study.mindit.domain.prevention.domain.repository.PreventionReportRepository;
 import com.study.mindit.domain.prevention.dto.request.*;
-import com.study.mindit.domain.prevention.dto.response.AnxietyHierarchyResponseDTO;
 import com.study.mindit.domain.prevention.dto.response.PreviousAnxietyDTO;
 import com.study.mindit.domain.prevention.dto.response.ReportResponseDTO;
 import lombok.RequiredArgsConstructor;
@@ -14,14 +14,12 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +30,7 @@ import java.util.Locale;
 @Service
 public class PreventionService {
 
-    private final OBChatRoomRepository chatRoomRepository;
+    private final ObsessionChatRoomRepository chatRoomRepository;
     private final PreventionReportRepository preventionReportRepository;
     private final ReactiveMongoTemplate mongoTemplate;
 
@@ -45,7 +43,7 @@ public class PreventionService {
                 .map(chatRoom -> {
                     // conversation_history에서 anxiety_scores 데이터 찾기
                     if (chatRoom.getConversationHistory() != null) {
-                        for (com.study.mindit.domain.chat.domain.OBConversation conversation : chatRoom.getConversationHistory()) {
+                        for (ObsessionConversation conversation : chatRoom.getConversationHistory()) {
                             Object content = conversation.getContent();
                             
                             if (content instanceof java.util.Map) {

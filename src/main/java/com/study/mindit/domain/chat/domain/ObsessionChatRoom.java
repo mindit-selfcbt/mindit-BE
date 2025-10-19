@@ -13,14 +13,14 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OBChatRoom extends BaseDocument {
+public class ObsessionChatRoom extends BaseDocument {
 
     @Field("room_type")
     private RoomType roomType;
     
     @Field("conversation_history")
     @Builder.Default
-    private List<OBConversation> conversationHistory = new ArrayList<>();
+    private List<ObsessionConversation> conversationHistory = new ArrayList<>();
     
     @Field("current_step")
     @Builder.Default
@@ -36,7 +36,7 @@ public class OBChatRoom extends BaseDocument {
             this.conversationHistory = new ArrayList<>();
         }
         this.conversationHistory.add(
-            OBConversation.builder()
+            ObsessionConversation.builder()
                 .role(role)
                 .content(content)
                 .build()
@@ -54,7 +54,7 @@ public class OBChatRoom extends BaseDocument {
     }
     
     // 대화 기록 설정
-    public void setConversationHistory(List<OBConversation> conversationHistory) {
+    public void setConversationHistory(List<ObsessionConversation> conversationHistory) {
         this.conversationHistory = conversationHistory;
     }
     

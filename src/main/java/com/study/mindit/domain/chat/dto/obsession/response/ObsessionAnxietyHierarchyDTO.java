@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OBAnxietyHierarchyDTO {
+public class ObsessionAnxietyHierarchyDTO {
 
     @JsonProperty("order")
     private Integer order;

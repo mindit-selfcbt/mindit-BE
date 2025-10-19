@@ -1,4 +1,4 @@
-package com.study.mindit.domain.chat.dto.obsession.request;
+package com.study.mindit.domain.chat.dto.cognition.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -10,11 +10,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OBChatRequestDTO_1 {
-
-    @JsonProperty("user_text")
-    private Object content;
+public class CognitionChatResponseDTO_4 {
 
     @JsonProperty("session_id")
     private String sessionId;
+
+    @JsonProperty("response")
+    private String response;
 }
+
