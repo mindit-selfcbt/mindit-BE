@@ -112,46 +112,78 @@ public class CognitionChatService {
 
     // 확인강박 Step 5: 사용자 선택에 따른 분기
     private Mono<CognitionChatResponseDTO> processCheckObsessionStep5(CognitionChatRequestDTO_1 request, CognitionChatRoom cognitionChatRoom) {
-        // TODO: 사용자 선택에 따라 process_chat_6 또는 process_chat_7로 분기
-        // 현재는 임시로 process_chat_7 (마무리) 호출
-        
         String obsessionType = extractObsessionTypeFromHistory(cognitionChatRoom);
         List<CognitionConversationDTO> conversationHistory = convertToConversationDTOs(cognitionChatRoom);
         
-        // 마무리 선택
-        return aiService.callProcessChat7(request.getSessionId(), obsessionType, conversationHistory)
-                .flatMap(aiResponse -> {
-                    cognitionChatRoom.addConversation("assistant", aiResponse.getCompletionMessage());
-                    cognitionChatRoom.incrementStep();
-                    
-                    return cognitionChatRoomRepository.save(cognitionChatRoom)
-                            .map(savedRoom -> CognitionChatResponseDTO.builder()
-                                    .sessionId(request.getSessionId())
-                                    .completionMessage(aiResponse.getCompletionMessage())
-                                    .build());
-                });
+        // 사용자 선택에 따라 분기 (userText로 판단)
+        if (request.getUserText() != null && 
+            (request.getUserText().contains("더") || 
+             request.getUserText().contains("계속") || 
+             request.getUserText().contains("이어서"))) {
+            // 추가 대화 선택: process_chat_6 호출
+            return aiService.callProcessChat6(request.getSessionId(), obsessionType, conversationHistory)
+                    .flatMap(aiResponse -> {
+                        cognitionChatRoom.addConversation("assistant", aiResponse.getResponse());
+                        cognitionChatRoom.incrementStep();
+                        
+                        return cognitionChatRoomRepository.save(cognitionChatRoom)
+                                .map(savedRoom -> CognitionChatResponseDTO.builder()
+                                        .sessionId(request.getSessionId())
+                                        .response(aiResponse.getResponse())
+                                        .build());
+                    });
+        } else {
+            // 마무리 선택: process_chat_7 호출
+            return aiService.callProcessChat7(request.getSessionId(), obsessionType, conversationHistory)
+                    .flatMap(aiResponse -> {
+                        cognitionChatRoom.addConversation("assistant", aiResponse.getCompletionMessage());
+                        cognitionChatRoom.incrementStep();
+                        
+                        return cognitionChatRoomRepository.save(cognitionChatRoom)
+                                .map(savedRoom -> CognitionChatResponseDTO.builder()
+                                        .sessionId(request.getSessionId())
+                                        .completionMessage(aiResponse.getCompletionMessage())
+                                        .build());
+                    });
+        }
     }
 
     // 오염강박 Step 5: 사용자 선택에 따른 분기
     private Mono<CognitionChatResponseDTO> processContaminationObsessionStep5(CognitionChatRequestDTO_1 request, CognitionChatRoom cognitionChatRoom) {
-        // TODO: 사용자 선택에 따라 process_chat_6 또는 process_chat_7로 분기
-        // 현재는 임시로 process_chat_6 호출
-        
         String obsessionType = extractObsessionTypeFromHistory(cognitionChatRoom);
         List<CognitionConversationDTO> conversationHistory = convertToConversationDTOs(cognitionChatRoom);
         
-        // 마무리 선택
-        return aiService.callProcessChat7(request.getSessionId(), obsessionType, conversationHistory)
-                .flatMap(aiResponse -> {
-                    cognitionChatRoom.addConversation("assistant", aiResponse.getCompletionMessage());
-                    cognitionChatRoom.incrementStep();
-                    
-                    return cognitionChatRoomRepository.save(cognitionChatRoom)
-                            .map(savedRoom -> CognitionChatResponseDTO.builder()
-                                    .sessionId(request.getSessionId())
-                                    .completionMessage(aiResponse.getCompletionMessage())
-                                    .build());
-                });
+        // 사용자 선택에 따라 분기 (userText로 판단)
+        if (request.getUserText() != null && 
+            (request.getUserText().contains("더") || 
+             request.getUserText().contains("계속") || 
+             request.getUserText().contains("이어서"))) {
+            // 추가 대화 선택: process_chat_6 호출
+            return aiService.callProcessChat6(request.getSessionId(), obsessionType, conversationHistory)
+                    .flatMap(aiResponse -> {
+                        cognitionChatRoom.addConversation("assistant", aiResponse.getResponse());
+                        cognitionChatRoom.incrementStep();
+                        
+                        return cognitionChatRoomRepository.save(cognitionChatRoom)
+                                .map(savedRoom -> CognitionChatResponseDTO.builder()
+                                        .sessionId(request.getSessionId())
+                                        .response(aiResponse.getResponse())
+                                        .build());
+                    });
+        } else {
+            // 마무리 선택: process_chat_7 호출
+            return aiService.callProcessChat7(request.getSessionId(), obsessionType, conversationHistory)
+                    .flatMap(aiResponse -> {
+                        cognitionChatRoom.addConversation("assistant", aiResponse.getCompletionMessage());
+                        cognitionChatRoom.incrementStep();
+                        
+                        return cognitionChatRoomRepository.save(cognitionChatRoom)
+                                .map(savedRoom -> CognitionChatResponseDTO.builder()
+                                        .sessionId(request.getSessionId())
+                                        .completionMessage(aiResponse.getCompletionMessage())
+                                        .build());
+                    });
+        }
     }
 
     // 사용자 메시지 처리 (Step 2 이상)
@@ -327,29 +359,42 @@ public class CognitionChatService {
         }
     }
 
-    // 확인강박 Step 4: 추가 대화 (process_chat_6 연결)
+    // 확인강박 Step 4: 사용자 선택에 따른 분기
     private Mono<CognitionChatResponseDTO> processCheckObsessionStep4(CognitionChatRequestDTO_1 request, CognitionChatRoom cognitionChatRoom) {
-        
-        // obsession_type 확인 (첫 번째 AI 응답에서 가져옴)
         String obsessionType = extractObsessionTypeFromHistory(cognitionChatRoom);
-        
-        // conversation_history를 DTO로 변환
         List<CognitionConversationDTO> conversationHistory = convertToConversationDTOs(cognitionChatRoom);
         
-        // 임시로 마무리 선택 (process_chat_7 연결)
-        return aiService.callProcessChat7(request.getSessionId(), obsessionType, conversationHistory)
-                .flatMap(aiResponse -> {
-                    // AI 응답을 conversation_history에 추가
-                    cognitionChatRoom.addConversation("assistant", aiResponse.getCompletionMessage());
-                    cognitionChatRoom.incrementStep();
-                    
-                    // 채팅방 저장
-                    return cognitionChatRoomRepository.save(cognitionChatRoom)
-                            .map(savedRoom -> CognitionChatResponseDTO.builder()
-                                    .sessionId(request.getSessionId())
-                                    .completionMessage(aiResponse.getCompletionMessage())
-                                    .build());
-                });
+        // 사용자 선택에 따라 분기 (userText로 판단)
+        if (request.getUserText() != null && 
+            (request.getUserText().contains("더") || 
+             request.getUserText().contains("계속") || 
+             request.getUserText().contains("이어서"))) {
+            // 추가 대화 선택: process_chat_6 호출
+            return aiService.callProcessChat6(request.getSessionId(), obsessionType, conversationHistory)
+                    .flatMap(aiResponse -> {
+                        cognitionChatRoom.addConversation("assistant", aiResponse.getResponse());
+                        cognitionChatRoom.incrementStep();
+                        
+                        return cognitionChatRoomRepository.save(cognitionChatRoom)
+                                .map(savedRoom -> CognitionChatResponseDTO.builder()
+                                        .sessionId(request.getSessionId())
+                                        .response(aiResponse.getResponse())
+                                        .build());
+                    });
+        } else {
+            // 마무리 선택: process_chat_7 호출
+            return aiService.callProcessChat7(request.getSessionId(), obsessionType, conversationHistory)
+                    .flatMap(aiResponse -> {
+                        cognitionChatRoom.addConversation("assistant", aiResponse.getCompletionMessage());
+                        cognitionChatRoom.incrementStep();
+                        
+                        return cognitionChatRoomRepository.save(cognitionChatRoom)
+                                .map(savedRoom -> CognitionChatResponseDTO.builder()
+                                        .sessionId(request.getSessionId())
+                                        .completionMessage(aiResponse.getCompletionMessage())
+                                        .build());
+                    });
+        }
     }
 
     // 오염강박 Step 4: 인지적 재구성 (process5 연결)
