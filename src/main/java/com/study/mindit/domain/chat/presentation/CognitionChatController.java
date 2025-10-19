@@ -27,6 +27,7 @@ public class CognitionChatController {
         log.info("=== Cognition WebSocket 메시지 수신됨! ===");
         log.info("sessionId: {}", sessionId);
         log.info("chatRequest: {}", chatRequest);
+        log.info("userText: {}", chatRequest.getUserText());
         
         chatService.processCognitionMessage(chatRequest)
                 .doOnNext(cognitionResponse -> {
