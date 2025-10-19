@@ -59,20 +59,38 @@ public class CognitionChatService {
 
     // 초기 응답 생성 (Step 1)
     private Mono<CognitionChatResponseDTO> generateInitialResponse(String sessionId, CognitionChatRoom cognitionChatRoom) {
-        return preventionReportRepository.findBySessionIdOrderByCreatedAtDesc(sessionId)
-                .filter(report -> report.getIsCompleted() != null && report.getIsCompleted())
-                .switchIfEmpty(Mono.error(new RuntimeException("완료된 반응방지 리포트를 찾을 수 없습니다. sessionId: " + sessionId)))
+        log.info("=== PreventionReport 조회 시작 - sessionId: {} ===", sessionId);
+        
+        // 디버깅: 모든 PreventionReport 조회
+        return preventionReportRepository.findAll()
+                .doOnNext(report -> log.info("=== 전체 PreventionReport: _id={}, session_id={}, isCompleted={} ===", 
+                    report.getId(), report.getSessionId(), report.getIsCompleted()))
+                .filter(report -> sessionId.equals(report.getSessionId()))
+                .doOnNext(report -> log.info("=== sessionId 매칭된 PreventionReport: _id={}, session_id={}, isCompleted={} ===", 
+                    report.getId(), report.getSessionId(), report.getIsCompleted()))
+                .doOnNext(report -> log.info("=== 조회된 PreventionReport: sessionId={}, isCompleted={}, situation={} ===", 
+                    report.getSessionId(), report.getIsCompleted(), report.getObsessionSituation()))
+                .filter(report -> {
+                    boolean isCompleted = report.getIsCompleted() != null && report.getIsCompleted();
+                    log.info("=== 필터링 체크: sessionId={}, isCompleted={}, result={} ===", 
+                        report.getSessionId(), report.getIsCompleted(), isCompleted);
+                    return isCompleted;
+                })
+                .doOnNext(report -> log.info("=== 필터링 통과한 PreventionReport: sessionId={} ===", report.getSessionId()))
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.error("=== 완료된 PreventionReport를 찾을 수 없음 - sessionId: {} ===", sessionId);
+                    return Mono.error(new RuntimeException("완료된 반응방지 리포트를 찾을 수 없습니다. sessionId: " + sessionId));
+                }))
                 .next()
                 .flatMap(preventionReport -> {
                     log.info("=== PreventionReport 조회 완료 ===");
                     
                     // 사용자 메시지를 conversation_history에 추가
-                    java.util.Map<String, Object> userContent = java.util.Map.of(
-                        "obsession_situation", preventionReport.getObsessionSituation(),
-                        "anxiety_level_start", preventionReport.getAnxietyLevelStart(),
-                        "anxiety_level_end", preventionReport.getAnxietyLevelEnd(),
-                        "obsession_thought", preventionReport.getObsessionThought()
-                    );
+                    java.util.Map<String, Object> userContent = new java.util.HashMap<>();
+                    userContent.put("obsession_situation", preventionReport.getObsessionSituation());
+                    userContent.put("anxiety_level_start", preventionReport.getAnxietyLevelStart());
+                    userContent.put("anxiety_level_end", preventionReport.getAnxietyLevelEnd());
+                    userContent.put("obsession_thought", preventionReport.getObsessionThought());
                     
                     cognitionChatRoom.addConversation("user", userContent);
                     
@@ -86,12 +104,11 @@ public class CognitionChatService {
                     )
                             .flatMap(aiResponse -> {
                                 // AI 응답을 conversation_history에 추가
-                                java.util.Map<String, Object> assistantContent = java.util.Map.of(
-                                    "encouragement_message", aiResponse.getEncouragementMessage(),
-                                    "cognitive_error_explanation", aiResponse.getCognitiveErrorExplanation(),
-                                    "personalized_situation", aiResponse.getPersonalizedSituation(),
-                                    "emotion_question", aiResponse.getEmotionQuestion()
-                                );
+                                java.util.Map<String, Object> assistantContent = new java.util.HashMap<>();
+                                assistantContent.put("encouragement_message", aiResponse.getContent().getEncouragementMessage());
+                                assistantContent.put("cognitive_error_explanation", aiResponse.getContent().getCognitiveErrorExplanation());
+                                assistantContent.put("personalized_situation", aiResponse.getContent().getPersonalizedSituation());
+                                assistantContent.put("emotion_question", aiResponse.getContent().getEmotionQuestion());
                                 
                                 cognitionChatRoom.addConversation("assistant", assistantContent);
                                 cognitionChatRoom.incrementStep();
@@ -101,10 +118,10 @@ public class CognitionChatService {
                                         .map(savedRoom -> CognitionChatResponseDTO.builder()
                                                 .sessionId(sessionId)
                                                 .obsessionType(aiResponse.getObsessionType())
-                                                .encouragementMessage(aiResponse.getEncouragementMessage())
-                                                .cognitiveErrorExplanation(aiResponse.getCognitiveErrorExplanation())
-                                                .personalizedSituation(aiResponse.getPersonalizedSituation())
-                                                .emotionQuestion(aiResponse.getEmotionQuestion())
+                                                .encouragementMessage(aiResponse.getContent().getEncouragementMessage())
+                                                .cognitiveErrorExplanation(aiResponse.getContent().getCognitiveErrorExplanation())
+                                                .personalizedSituation(aiResponse.getContent().getPersonalizedSituation())
+                                                .emotionQuestion(aiResponse.getContent().getEmotionQuestion())
                                                 .build());
                             });
                 });
@@ -231,12 +248,11 @@ public class CognitionChatService {
         )
                 .flatMap(aiResponse -> {
                     // AI 응답을 conversation_history에 추가
-                    java.util.Map<String, Object> assistantContent = java.util.Map.of(
-                        "encouragement_message", aiResponse.getEncouragementMessage(),
-                        "cognitive_error_explanation", aiResponse.getCognitiveErrorExplanation(),
-                        "personalized_situation", aiResponse.getPersonalizedSituation(),
-                        "emotion_question", aiResponse.getEmotionQuestion()
-                    );
+                    java.util.Map<String, Object> assistantContent = new java.util.HashMap<>();
+                    assistantContent.put("encouragement_message", aiResponse.getContent().getEncouragementMessage());
+                    assistantContent.put("cognitive_error_explanation", aiResponse.getContent().getCognitiveErrorExplanation());
+                    assistantContent.put("personalized_situation", aiResponse.getContent().getPersonalizedSituation());
+                    assistantContent.put("emotion_question", aiResponse.getContent().getEmotionQuestion());
                     
                     cognitionChatRoom.addConversation("assistant", assistantContent);
                     cognitionChatRoom.incrementStep();
@@ -246,10 +262,10 @@ public class CognitionChatService {
                             .map(savedRoom -> CognitionChatResponseDTO.builder()
                                     .sessionId(request.getSessionId())
                                     .obsessionType(aiResponse.getObsessionType())
-                                    .encouragementMessage(aiResponse.getEncouragementMessage())
-                                    .cognitiveErrorExplanation(aiResponse.getCognitiveErrorExplanation())
-                                    .personalizedSituation(aiResponse.getPersonalizedSituation())
-                                    .emotionQuestion(aiResponse.getEmotionQuestion())
+                                    .encouragementMessage(aiResponse.getContent().getEncouragementMessage())
+                                    .cognitiveErrorExplanation(aiResponse.getContent().getCognitiveErrorExplanation())
+                                    .personalizedSituation(aiResponse.getContent().getPersonalizedSituation())
+                                    .emotionQuestion(aiResponse.getContent().getEmotionQuestion())
                                     .build());
                 });
     }
@@ -273,12 +289,11 @@ public class CognitionChatService {
             return aiService.callProcessChat3(request.getSessionId(), obsessionType, conversationHistory)
                     .flatMap(aiResponse -> {
                         // AI 응답을 conversation_history에 추가
-                        java.util.Map<String, Object> assistantContent = java.util.Map.of(
-                            "empathy_message", aiResponse.getEmpathyMessage(),
-                            "insight_message", aiResponse.getInsightMessage(),
-                            "encouragement_message", aiResponse.getEncouragementMessage(),
-                            "choice_question", aiResponse.getChoiceQuestion()
-                        );
+                        java.util.Map<String, Object> assistantContent = new java.util.HashMap<>();
+                        assistantContent.put("empathy_message", aiResponse.getEmpathyMessage());
+                        assistantContent.put("insight_message", aiResponse.getInsightMessage());
+                        assistantContent.put("encouragement_message", aiResponse.getEncouragementMessage());
+                        assistantContent.put("choice_question", aiResponse.getChoiceQuestion());
                         
                         cognitionChatRoom.addConversation("assistant", assistantContent);
                         cognitionChatRoom.incrementStep();
@@ -410,14 +425,13 @@ public class CognitionChatService {
         return aiService.callProcessChat5(request.getSessionId(), obsessionType, conversationHistory)
                 .flatMap(aiResponse -> {
                     // AI 응답을 conversation_history에 추가
-                    java.util.Map<String, Object> assistantContent = java.util.Map.of(
-                        "intro_message", aiResponse.getIntroMessage(),
-                        "cognitive_restructuring", aiResponse.getCognitiveRestructuring(),
-                        "encouragement_message", aiResponse.getEncouragementMessage(),
-                        "insight_message", aiResponse.getInsightMessage(),
-                        "final_encouragement", aiResponse.getFinalEncouragement(),
-                        "choice_question", aiResponse.getChoiceQuestion()
-                    );
+                    java.util.Map<String, Object> assistantContent = new java.util.HashMap<>();
+                    assistantContent.put("intro_message", aiResponse.getIntroMessage());
+                    assistantContent.put("cognitive_restructuring", aiResponse.getCognitiveRestructuring());
+                    assistantContent.put("encouragement_message", aiResponse.getEncouragementMessage());
+                    assistantContent.put("insight_message", aiResponse.getInsightMessage());
+                    assistantContent.put("final_encouragement", aiResponse.getFinalEncouragement());
+                    assistantContent.put("choice_question", aiResponse.getChoiceQuestion());
                     
                     cognitionChatRoom.addConversation("assistant", assistantContent);
                     cognitionChatRoom.incrementStep();

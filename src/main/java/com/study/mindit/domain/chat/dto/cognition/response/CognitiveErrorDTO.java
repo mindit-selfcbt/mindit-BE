@@ -10,14 +10,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CognitionChatResponseDTO_1 {
+public class CognitiveErrorDTO {
+    
+    @JsonProperty("error_type")
+    private String errorType;
 
-    @JsonProperty("session_id")
-    private String sessionId;
-
-    @JsonProperty("obsession_type")
-    private String obsessionType;
-
-    @JsonProperty("content")
-    private CognitionChatContentDTO content;
+    @JsonProperty("description")
+    private String description;
 }
