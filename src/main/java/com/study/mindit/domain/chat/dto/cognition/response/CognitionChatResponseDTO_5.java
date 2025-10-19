@@ -19,7 +19,7 @@ public class CognitionChatResponseDTO_5 {
     private String introMessage;
 
     @JsonProperty("cognitive_restructuring")
-    private Object cognitiveRestructuring;
+    private CognitiveRestructuringDTO cognitiveRestructuring;
 
     @JsonProperty("encouragement_message")
     private String encouragementMessage;

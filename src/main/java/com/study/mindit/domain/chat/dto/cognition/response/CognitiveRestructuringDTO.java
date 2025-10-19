@@ -10,14 +10,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CognitionChatResponseDTO_1 {
+public class CognitiveRestructuringDTO {
+    
+    @JsonProperty("old_thought")
+    private String oldThought;
 
-    @JsonProperty("session_id")
-    private String sessionId;
-
-    @JsonProperty("obsession_type")
-    private String obsessionType;
-
-    @JsonProperty("content")
-    private CognitionChatContentDTO content;
+    @JsonProperty("new_perspective")
+    private String newPerspective;
 }

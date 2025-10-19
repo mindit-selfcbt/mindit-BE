@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import java.util.List;
 
 @Getter
 @Builder
@@ -16,7 +17,7 @@ public class CognitionChatResponseDTO_2 {
     private String sessionId;
 
     @JsonProperty("cognitive_errors")
-    private Object cognitiveErrors;
+    private List<CognitiveErrorDTO> cognitiveErrors;
 
     @JsonProperty("reflection_question")
     private String reflectionQuestion;
