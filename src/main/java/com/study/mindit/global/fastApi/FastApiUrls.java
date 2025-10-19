@@ -34,6 +34,12 @@ public class FastApiUrls {
     @Value("${fastApi.urls.obsession.analyze_chat_9}")
     private String analyze9;
 
+    @Value("${fastApi.urls.obsession.analyze_report}")
+    private String analyzeReport;
+
+    @Value("${fastApi.urls.obsession.analyze_report_2}")
+    private String analyzeReport2;
+
     @Value("${fastApi.urls.cognition.process_chat_1}")
     private String process1;
 
@@ -54,6 +60,9 @@ public class FastApiUrls {
 
     @Value("${fastApi.urls.cognition.process_chat_7}")
     private String process7;
+
+    @Value("${fastApi.urls.obsession.process_report}")
+    private String processReport;
 
     // Cognition process_chat 메서드들
     public String getProcessChat1() {
@@ -119,5 +128,17 @@ public class FastApiUrls {
 
     public String getAnalyze9() {
         return analyze9;
+    }
+
+    public String getProcessReport() {
+        return processReport;
+    }
+
+    public String getAnalyzeReport() {
+        return analyzeReport;
+    }
+
+    public String getAnalyzeReport2() {
+        return analyzeReport2;
     }
 }
